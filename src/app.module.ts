@@ -13,8 +13,9 @@ import { DemandeController } from './demande/demande.controller';
 import { DemandeService } from './demande/demande.service';
 import { DemandeModule } from './demande/demande.module';
 import { MissionModule } from './mission/mission.module';
-import { DiscusionModule } from './discusion/discusion.module';
+import { DiscussionModule } from './discusion/discusion.module';
 import { MessageModule } from './message/message.module';
+import { DemandeRepository } from './demande/demande.repository';
 
 @Module({
   imports: [
@@ -33,11 +34,11 @@ import { MessageModule } from './message/message.module';
     ProduitModule,
     DemandeModule,
     MissionModule,
-    DiscusionModule,
+    DiscussionModule,
     MessageModule
   ],
   controllers: [AppController, DemandeController],
-  providers: [AppService,UtilisateurRepository, DemandeService],
+  providers: [AppService,UtilisateurRepository, DemandeService,DemandeRepository],
 
 
 

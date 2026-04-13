@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
-import { DiscussionService } from './discussion.service';
-import { Discussion } from './discussion.model';
+import { DiscussionService } from './discusion.service';
+import { Discussion } from './discusion.model';
 
 @Controller('discussion')
 export class DiscussionController {
