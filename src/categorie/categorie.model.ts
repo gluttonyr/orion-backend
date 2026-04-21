@@ -4,12 +4,12 @@ import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
 export class Categorie {
 
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  libellé: string;
+  libellé!: string;
 
   @Column()
-  dexcription: string;
+  dexcription!: string;
 
 }

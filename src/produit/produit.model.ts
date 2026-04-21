@@ -4,24 +4,29 @@ import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 export class Produit {
 
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  nom: string;
+  nom!: string;
 
   @Column()
-  image: string;
+  image!: string;
+
+  @Column("text", { array: true, nullable: true })
+  images_secondaires!: string[];
+
+
 
   @Column('float')
-  prix: number;
+  prix!: number;
 
   @Column()
-  description: string;
+  description!: string;
 
   @Column()
-  stock: number;
+  stock!: number;
 
   @Column()
-  statut: string;
+  statut!: string;
 }
 

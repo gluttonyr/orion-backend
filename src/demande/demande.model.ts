@@ -4,11 +4,11 @@ import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 export class Demande {
 
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  statue: string;
+  statue!: string;
 
   @Column()
-  date_envoi: string;
+  date_envoi!: string;
 }

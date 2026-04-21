@@ -4,26 +4,26 @@ import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 export class Mission {
 
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  nom: string;
+  nom!: string;
 
   @Column()
-  duree: string;
+  duree!: string;
 
   @Column('float')
-  prix_total: number;
+  prix_total!: number;
 
   @Column()
-  description: string;
+  description!: string;
 
   @Column()
-  date_debut: string;
+  date_debut!: string;
 
   @Column()
-  date_fin: string;
+  date_fin!: string;
 
   @Column()
-  statue: string;
+  statue!: string;
 }

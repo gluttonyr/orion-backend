@@ -10,30 +10,30 @@ export enum UserRole {
 export class Utilisateur {
 
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  nom: string;
+  nom!: string;
 
   @Column()
-  prenom: string;
+  prenom!: string;
 
   @Column()
-  email: string;
+  email!: string;
 
   @Column()
-  date_naissance: string;
+  date_naissance!: string;
 
   @Column()
-  adresse: string;
+  adresse!: string;
 
   @Column({
     type: 'text',
     enum: UserRole,
     default: UserRole.UTILISATEUR,
   })
-  role: UserRole;
+  role!: UserRole;
 
   @Column()
-  password: string;
+  password!: string;
 }

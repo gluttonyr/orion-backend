@@ -4,14 +4,14 @@ import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 export class Vente {
 
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  date_achat: string;
+  date_achat!: string;
 
   @Column('float')
-  prix_total: number;
+  prix_total!: number;
 
   @Column()
-  reference: string;
+  reference!: string;
 }

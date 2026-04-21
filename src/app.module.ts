@@ -16,6 +16,7 @@ import { MissionModule } from './mission/mission.module';
 import { DiscussionModule } from './discusion/discusion.module';
 import { MessageModule } from './message/message.module';
 import { DemandeRepository } from './demande/demande.repository';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -35,7 +36,8 @@ import { DemandeRepository } from './demande/demande.repository';
     DemandeModule,
     MissionModule,
     DiscussionModule,
-    MessageModule
+    MessageModule,
+    UploadModule
   ],
   controllers: [AppController, DemandeController],
   providers: [AppService,UtilisateurRepository, DemandeService,DemandeRepository],

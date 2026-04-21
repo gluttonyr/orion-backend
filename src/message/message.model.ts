@@ -4,20 +4,20 @@ import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 export class Message {
 
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  heure: string;
+  heure!: string;
 
   @Column()
-  contenue: string;
+  contenue!: string;
 
   @Column()
-  date_debut: string;
+  date_debut!: string;
 
   @Column()
-  type_message: string;
+  type_message!: string;
 
   @Column()
-  statue: string;
+  statue!: string;
 }

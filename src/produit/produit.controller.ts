@@ -1,15 +1,47 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { ProduitService } from './produit.service';
 import { Produit } from './produit.model';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { multerConfig } from 'src/upload/multer.config';
+import { UploadService } from 'src/upload/upload.service';
 
-@Controller('produit')
+@Controller('produits')
 export class ProduitController {
   constructor(private readonly produitService: ProduitService) {}
 
   // CREATE
   @Post()
-  create(@Body() body: Partial<Produit>) {
-    return this.produitService.create(body);
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'image', maxCount: 1 },
+        { name: 'images_secondaires', maxCount: 5 },
+      ],
+      multerConfig(new UploadService())
+    )
+  )
+  async create(
+    @UploadedFiles()
+    files: {
+      image?: Express.Multer.File[];
+      images_secondaires?: Express.Multer.File[];
+    },
+    @Body() body: Partial<Produit>,
+  ) {
+
+    // image principale
+    const image = files.image?.[0]?.filename;
+
+    // images secondaires
+    const images_secondaires = files.images_secondaires?.map(
+      (file) => file.filename,
+    );
+
+    return this.produitService.create({
+      ...body,
+      image,
+      images_secondaires: images_secondaires,
+    });
   }
 
   // GET ALL
