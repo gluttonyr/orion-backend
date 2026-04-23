@@ -1,4 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, ManyToMany, JoinTable } from "typeorm";
+import { Utilisateur } from "../utilisateur/utilisateur.model";
+import { Produit } from "../produit/produit.model";
 
 @Entity()
 export class Vente {
@@ -6,12 +8,33 @@ export class Vente {
   @PrimaryGeneratedColumn()
   id!: number;
 
+  @ManyToOne(() => Utilisateur)
+  @JoinColumn({ name: 'utilisateurId' })
+  utilisateur!: Utilisateur;
+
   @Column()
-  date_achat!: string;
+  utilisateurId!: number;
+
+  @ManyToMany(() => Produit)
+  @JoinTable({
+    name: 'vente_produit',
+    joinColumn: { name: 'venteId', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'produitId', referencedColumnName: 'id' }
+  })
+  produits!: Produit[];
+
+  @Column('simple-array')
+  quantites!: number[];
+
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  date_achat!: Date;
 
   @Column('float')
   prix_total!: number;
 
   @Column()
   reference!: string;
+
+  @Column({ default: 'en_cours' })
+  statut!: string;
 }

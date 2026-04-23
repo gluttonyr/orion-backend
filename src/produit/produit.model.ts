@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from "typeorm";
+import { Categorie } from "../categorie/categorie.model";
 
 @Entity()
 export class Produit {
@@ -15,8 +16,6 @@ export class Produit {
   @Column("text", { array: true, nullable: true })
   images_secondaires!: string[];
 
-
-
   @Column('float')
   prix!: number;
 
@@ -28,5 +27,11 @@ export class Produit {
 
   @Column()
   statut!: string;
-}
 
+  @ManyToOne(() => Categorie)
+  @JoinColumn({ name: 'categorieId' })
+  categorie!: Categorie;
+
+  @Column({ nullable: true })
+  categorieId!: number;
+}

@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from "typeorm";
+import { Utilisateur } from "../utilisateur/utilisateur.model";
 
 @Entity()
 export class Demande {
@@ -6,9 +7,22 @@ export class Demande {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column()
-  statue!: string;
+  @ManyToOne(() => Utilisateur)
+  @JoinColumn({ name: 'utilisateurId' })
+  utilisateur!: Utilisateur;
 
   @Column()
-  date_envoi!: string;
+  utilisateurId!: number;
+
+  @Column()
+  type!: string;
+
+  @Column()
+  description!: string;
+
+  @Column({ default: 'en_attente' })
+  statut!: string;
+
+  @Column()
+  date_envoi!: Date;
 }

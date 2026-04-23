@@ -3,7 +3,6 @@ import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 export enum UserRole {
   UTILISATEUR = 'UTILISATEUR',
   COMMERCANT = 'COMMERCANT',
-  ENTREPRENEUR = 'ENTREPRENEUR',
 }
 
 @Entity()
@@ -12,6 +11,7 @@ export class Utilisateur {
   @PrimaryGeneratedColumn()
   id!: number;
 
+  // informations personnelles
   @Column()
   nom!: string;
 
@@ -26,6 +26,9 @@ export class Utilisateur {
 
   @Column()
   adresse!: string;
+  
+  @Column({ nullable: true })
+  contact!: string;
 
   @Column({
     type: 'text',
@@ -36,4 +39,12 @@ export class Utilisateur {
 
   @Column()
   password!: string;
+
+  // informations spécifiques pour les commerçants et entrepreneurs
+  @Column({ nullable: true })
+  specialite!: string;
+
+  @Column({ nullable: true })
+  localisation!: string;
+
 }

@@ -13,10 +13,11 @@ import { DemandeController } from './demande/demande.controller';
 import { DemandeService } from './demande/demande.service';
 import { DemandeModule } from './demande/demande.module';
 import { MissionModule } from './mission/mission.module';
-import { DiscussionModule } from './discusion/discusion.module';
+import { DiscussionModule } from './discussion/discussion.module';
 import { MessageModule } from './message/message.module';
 import { DemandeRepository } from './demande/demande.repository';
 import { UploadModule } from './upload/upload.module';
+import { PanierModule } from './panier/panier.module';
 
 @Module({
   imports: [
@@ -26,8 +27,7 @@ import { UploadModule } from './upload/upload.module';
       database: 'orion_db.sqlite', // nom du fichier
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       autoLoadEntities: true,
-      synchronize: true, 
-    }),
+      synchronize: true,}),
     TypeOrmModule.forFeature([Utilisateur,Categorie]),
     UtilisateurModule,
     CategorieModule,
@@ -37,12 +37,10 @@ import { UploadModule } from './upload/upload.module';
     MissionModule,
     DiscussionModule,
     MessageModule,
-    UploadModule
-  ],
+    UploadModule,
+    PanierModule],
   controllers: [AppController, DemandeController],
   providers: [AppService,UtilisateurRepository, DemandeService,DemandeRepository],
-
-
-
 })
+
 export class AppModule {}

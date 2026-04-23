@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { Discussion } from "./discusion.model";
+import { Discussion } from "./discussion.model";
 import { DataSource, Repository } from "typeorm";
 import { InjectDataSource } from "@nestjs/typeorm";
 

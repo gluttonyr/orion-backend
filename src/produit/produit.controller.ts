@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { ProduitService } from './produit.service';
 import { Produit } from './produit.model';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
@@ -59,6 +59,11 @@ export class ProduitController {
   // UPDATE
   @Put(':id')
   update(@Param('id') id: string, @Body() body: Partial<Produit>) {
+    return this.produitService.update(Number(id), body);
+  }
+
+  @Patch(':id')
+  updatePartial(@Param('id') id: string, @Body() body: Partial<Produit>) {
     return this.produitService.update(Number(id), body);
   }
 
