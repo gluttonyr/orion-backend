@@ -7,42 +7,59 @@ import { UploadService } from 'src/upload/upload.service';
 
 @Controller('produits')
 export class ProduitController {
-  constructor(private readonly produitService: ProduitService) {}
+  constructor(private readonly produitService: ProduitService,private readonly uploadService: UploadService) {}
 
   // CREATE
-  @Post()
-  @UseInterceptors(
-    FileFieldsInterceptor(
-      [
-        { name: 'image', maxCount: 1 },
-        { name: 'images_secondaires', maxCount: 5 },
-      ],
-      multerConfig(new UploadService())
-    )
-  )
-  async create(
-    @UploadedFiles()
-    files: {
-      image?: Express.Multer.File[];
-      images_secondaires?: Express.Multer.File[];
-    },
-    @Body() body: Partial<Produit>,
-  ) {
+ @Post()
+@UseInterceptors(
+  FileFieldsInterceptor([
+    { name: 'image', maxCount: 1 },
+    { name: 'images_secondaires', maxCount: 5 },
+  ]),
+)
+async create(
+  @UploadedFiles()
+  files: {
+    image?: Express.Multer.File[];
+    images_secondaires?: Express.Multer.File[];
+  },
+  @Body() body: Partial<Produit>,
+) {
 
-    // image principale
-    const image = files.image?.[0]?.filename;
+  console.log('Received files:', files);
+  console.log('Received body:', body);
 
-    // images secondaires
-    const images_secondaires = files.images_secondaires?.map(
-      (file) => file.filename,
+  let image: string | undefined;
+
+  // image principale
+  if (files.image?.[0]) {
+    image = await this.uploadService.saveFile(
+      files.image[0],
+      'produits',
     );
-
-    return this.produitService.create({
-      ...body,
-      image,
-      images_secondaires: images_secondaires,
-    });
   }
+
+  // images secondaires
+  let images_secondaires: string[] = [];
+
+  if (files.images_secondaires?.length) {
+    images_secondaires = await Promise.all(
+      files.images_secondaires.map((file) =>
+        this.uploadService.saveFile(
+          file,
+          'produits',
+        ),
+      ),
+    );
+  }
+
+
+  return this.produitService.create({
+    ...body,
+    image,
+    images_secondaires,
+  });
+}
 
   // GET ALL
   @Get()

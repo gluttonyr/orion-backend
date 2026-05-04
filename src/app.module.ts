@@ -18,6 +18,11 @@ import { MessageModule } from './message/message.module';
 import { DemandeRepository } from './demande/demande.repository';
 import { UploadModule } from './upload/upload.module';
 import { PanierModule } from './panier/panier.module';
+import { BoutiqueController } from './boutique/boutique.controllers';
+import { BoutiqueService } from './boutique/boutique.service';
+import { BoutiqueRepository } from './boutique/boutique.repository';
+import { Boutique } from './boutique/boutique.model';
+import { UploadService } from './upload/upload.service';
 
 @Module({
   imports: [
@@ -28,7 +33,7 @@ import { PanierModule } from './panier/panier.module';
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       autoLoadEntities: true,
       synchronize: true,}),
-    TypeOrmModule.forFeature([Utilisateur,Categorie]),
+    TypeOrmModule.forFeature([Utilisateur,Categorie,Boutique]),
     UtilisateurModule,
     CategorieModule,
     VenteModule,
@@ -39,8 +44,8 @@ import { PanierModule } from './panier/panier.module';
     MessageModule,
     UploadModule,
     PanierModule],
-  controllers: [AppController, DemandeController],
-  providers: [AppService,UtilisateurRepository, DemandeService,DemandeRepository],
+  controllers: [AppController, DemandeController,BoutiqueController],
+  providers: [AppService,UtilisateurRepository, DemandeService,DemandeRepository,BoutiqueService,BoutiqueRepository,UploadService],
 })
 
 export class AppModule {}
