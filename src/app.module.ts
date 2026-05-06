@@ -23,6 +23,7 @@ import { BoutiqueService } from './boutique/boutique.service';
 import { BoutiqueRepository } from './boutique/boutique.repository';
 import { Boutique } from './boutique/boutique.model';
 import { UploadService } from './upload/upload.service';
+import { UploadController } from './upload/upload.controller';
 
 @Module({
   imports: [
@@ -44,7 +45,7 @@ import { UploadService } from './upload/upload.service';
     MessageModule,
     UploadModule,
     PanierModule],
-  controllers: [AppController, DemandeController,BoutiqueController],
+  controllers: [AppController, DemandeController,BoutiqueController,UploadController],
   providers: [AppService,UtilisateurRepository, DemandeService,DemandeRepository,BoutiqueService,BoutiqueRepository,UploadService],
 })
 

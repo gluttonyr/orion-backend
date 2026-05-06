@@ -20,6 +20,8 @@ async create(
   @UploadedFile() file: Express.Multer.File,
   @Body() body: any,
 ) {
+  console.log('Create Boutique - Received data:', body);
+  console.log('Create Boutique - Received file:', file);
 
   const data = body.data
     ? JSON.parse(body.data)
@@ -33,6 +35,7 @@ async create(
       'boutiques',
     );
   }
+  
 
   const payload: Partial<Boutique> = {
     nom: data.nom,

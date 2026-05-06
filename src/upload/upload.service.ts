@@ -6,7 +6,7 @@ import * as path from 'path';
 export class UploadService {
 
   public getBaseUploadPath(): string {
-    const uploadPath = process.env.SAVE_FILE || './uploads';
+    const uploadPath = process.env.UPLOAD_PATH || './uploads';
 
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
@@ -45,6 +45,7 @@ export class UploadService {
     const fileName = this.generateFileName(file);
 
     const fullPath = path.join(folderPath, fileName);
+    console.log('Saving file to:', fullPath);
 
     // Sauvegarde fichier
     if (file.buffer) {
