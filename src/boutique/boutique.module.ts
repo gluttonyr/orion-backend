@@ -4,9 +4,10 @@ import { Boutique } from './boutique.model';
 import { BoutiqueController } from './boutique.controllers';
 import { BoutiqueService } from './boutique.service';
 import { BoutiqueRepository } from './boutique.repository';
+import { UploadModule } from '../upload/upload.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Boutique])],
+  imports: [TypeOrmModule.forFeature([Boutique]), UploadModule],
   controllers: [BoutiqueController],
   providers: [BoutiqueService, BoutiqueRepository],
   exports: [BoutiqueService],

@@ -4,11 +4,12 @@ import { Produit } from './produit.model';
 import { ProduitService } from './produit.service';
 import { ProduitController } from './produit.controller';
 import { ProduitRepository } from './produit.repository';
-import { UploadService } from 'src/upload/upload.service';
+import { UploadModule } from '../upload/upload.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Produit])],
+  imports: [TypeOrmModule.forFeature([Produit]), UploadModule],
   controllers: [ProduitController],
-  providers: [ProduitService, ProduitRepository, UploadService],
+  providers: [ProduitService, ProduitRepository],
 })
+
 export class ProduitModule {}

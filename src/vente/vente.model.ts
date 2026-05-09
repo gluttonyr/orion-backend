@@ -26,7 +26,8 @@ export class Vente {
   @Column('simple-array')
   quantites!: number[];
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  // @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column()
   date_achat!: Date;
 
   @Column('float')

@@ -8,7 +8,7 @@ export class MissionController {
 
   // CREATE
   @Post()
-  create(@Body() body: Partial<Mission>) {
+  create(@Body() body: Mission) {
     return this.missionService.create(body);
   }
 

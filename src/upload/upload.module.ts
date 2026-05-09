@@ -3,6 +3,8 @@ import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { existsSync, mkdirSync } from 'fs';
+import { UploadService } from './upload.service';
+import { UploadController } from './upload.controller';
 
 const uploadDir = './uploads';
 if (!existsSync(uploadDir)) {
@@ -22,6 +24,8 @@ if (!existsSync(uploadDir)) {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   ],
-  exports: [MulterModule],
+  controllers: [UploadController],
+  providers: [UploadService],
+  exports: [MulterModule, UploadService],
 })
 export class UploadModule {}

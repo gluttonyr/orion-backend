@@ -1,6 +1,37 @@
 import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from "typeorm";
 import { Utilisateur } from "../utilisateur/utilisateur.model";
 
+export enum TypeMission {
+  AUTRE = 'autre',
+  EMPLOI = 'emploi',
+  SERVICE = 'service',
+  MISSION = 'mission',
+  FORMATION = 'formation',
+  FREELANCE = 'freelance',
+  LIVRAISON = 'livraison',
+}
+
+export enum TypePaiement {
+  FIXE = 'fixe',
+  HORAIRE = 'horaire',
+  JOURNALIER = 'journalier',
+  MENSUEL = 'mensuel',
+  PROJET = 'projet',
+}
+
+export enum StatutMission {
+  OUVERTE = 'ouverte',
+  EN_COURS = 'en_cours',
+  TERMINEE = 'terminée',
+  ANNULEE = 'annulée',
+}
+
+export enum StatutCandidature {
+  EN_ATTENTE = 'en_attente',
+  ACCEPTE = 'accepté',
+  REFUSE = 'refusé',
+}
+
 @Entity()
 export class Mission {
 
@@ -8,40 +39,49 @@ export class Mission {
   id!: number;
 
   @ManyToOne(() => Utilisateur)
-  @JoinColumn({ name: 'entrepreneurId' })
-  entrepreneur!: Utilisateur;
-
-  @Column()
-  entrepreneurId!: number;
-
-  @ManyToOne(() => Utilisateur)
   @JoinColumn({ name: 'commercantId' })
   commercant!: Utilisateur;
 
-  @Column({ nullable: true })
-  commercantId!: number;
 
   @Column()
-  nom!: string;
+  titre!: string;
+  
+  @Column()
+  localisation!: string;
+
+  @Column({ type: 'text', enum: TypeMission, default: TypeMission.AUTRE })
+  type!: TypeMission;
+  
+  @Column({type: 'text', enum: StatutMission, default: StatutMission.OUVERTE })
+  statut!: StatutMission;
 
   @Column()
-  duree!: string;
-
-  @Column('float')
-  prix_total!: number;
+  descriptionCourte!: string;
 
   @Column()
   description!: string;
 
-  @Column({ default: 'ouverte' })
-  statut!: string;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  montant!: number;
+
+  @Column({ type: 'text', enum: TypePaiement, default: TypePaiement.FIXE })
+  frequencePaiement!: TypePaiement;
+
+  // Durée de la mission en mois
+  @Column()
+  dureeMission!: number;
+
+  // @Column({default: () => 'CURRENT_TIMESTAMP'})
+  @Column()
+  datePublication!: Date;
 
   @Column()
-  date_debut!: string;
+  dateLimiteCandidature!: Date;
 
   @Column()
-  date_fin!: string;
+  requis!: string;
 
-  @Column()
-  statue!: string;
+  @Column({ type: "text", enum: StatutCandidature, default: StatutCandidature.EN_ATTENTE })
+  candidatures?: Record<number, { user: number; statut: StatutCandidature }> | StatutCandidature.EN_ATTENTE;
 }

@@ -2,8 +2,8 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UploadedFiles, 
 import { ProduitService } from './produit.service';
 import { Produit } from './produit.model';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { multerConfig } from 'src/upload/multer.config';
-import { UploadService } from 'src/upload/upload.service';
+import { multerConfig } from '../upload/multer.config';
+import { UploadService } from '../upload/upload.service';
 
 @Controller('produits')
 export class ProduitController {

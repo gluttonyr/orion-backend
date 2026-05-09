@@ -1,21 +1,33 @@
 import { Injectable } from '@nestjs/common';
 import { Mission } from './mission.model';
+import { MissionRepository } from './mission.repository';
 
 @Injectable()
 export class MissionService {
-    create(body: Partial<Mission>) {
-        throw new Error('Method not implemented.');
+    constructor(private readonly missions: MissionRepository,) {}
+
+    create(body: Mission) {
+        const mission = this.missions.create(body);
+        return this.missions.save(mission);
     }
-    findAll() {
-        throw new Error('Method not implemented.');
+
+    findAll() { return this.missions.find();}
+
+    findOne(arg: number) { return this.missions.findOne({ where: { id: arg } });}
+
+    async update(arg: number, body: Partial<Mission>) {
+        const mission = await this.missions.findOne({ where: { id: arg } });
+        if (!mission) {
+            throw new Error(`Mission avec id ${arg} introuvable`);
+        }
+
+       Object.assign(mission, body);
+        return this.missions.save(mission);
     }
-    findOne(arg0: number) {
-        throw new Error('Method not implemented.');
-    }
-    update(arg0: number, body: Partial<Mission>) {
-        throw new Error('Method not implemented.');
-    }
-    remove(arg0: number) {
-        throw new Error('Method not implemented.');
+
+    async remove(arg: number) {
+        const mission = await this.missions.findOne({ where: { id: arg } });
+        if (!mission) { throw new Error(`Mission avec id ${arg} introuvable`);}
+        return this.missions.remove(mission);
     }
 }

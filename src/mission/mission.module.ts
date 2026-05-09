@@ -11,4 +11,5 @@ import { MissionRepository } from './mission.repository';
   providers: [MissionService, MissionRepository],
   exports: [MissionRepository],
 })
+
 export class MissionModule {}

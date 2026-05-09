@@ -1,8 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { Utilisateur } from "./utilisateur.model";
 import * as bcrypt from 'bcrypt';
 import { UtilisateurRepository } from "./utilisateur.repository";
 import { UploadService } from "./upload.service";
+import { JwtService } from "@nestjs/jwt";
 
 
 @Injectable()
@@ -10,8 +11,8 @@ export class UtilisateurService {
 
   constructor(
     private readonly repo: UtilisateurRepository,
-    private readonly uploadService: UploadService
-  ) {}
+    private readonly uploadService: UploadService,
+    private readonly jwt: JwtService) {}
 
   // CREATE USER
   async createUsers(user: Utilisateur) {
@@ -25,35 +26,52 @@ export class UtilisateurService {
 
   // LOGIN
   async login(email: string, password: string) {
-    const user = await this.repo.findOne({ where: { email } });
+    const user = await this.repo.findOne({ where: { email },});
 
-    if (!user) {
-      throw new Error('Utilisateur non trouvé');
-    }
+    // Vérification user
+    if (!user) { throw new NotFoundException("Utilisateur non trouvé");}
 
+    // Vérification password
     const isMatch = await bcrypt.compare(password, user.password);
 
-    if (!isMatch) {
-      throw new Error('Mot de passe incorrect');
-    }
+    if (!isMatch) { throw new UnauthorizedException("Mot de passe incorrect");}
 
-    return user;
+    // Payload JWT
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,};
+
+    // Génération token
+    const token = await this.jwt.signAsync(payload);
+
+    // Retirer password
+    const { password: _, ...userWithoutPassword } = user;
+
+    return {
+      access_token: token, 
+      user: userWithoutPassword,};
   }
 
   // FIND ALL
-  async findAll() {
-    return this.repo.find();
-  }
+  async findAll() { return this.repo.find();}
 
   // FIND ONE
   async findOne(id: number) {
     const user = await this.repo.findOne({ where: { id } });
 
-    if (!user) {
-      throw new Error('Utilisateur non trouvé');
-    }
+    if (!user) { throw new Error('Utilisateur non trouvé');}
 
     return user;
+  }
+
+  // find user login
+  async findloggedUser(token: string) {
+    try {
+      const decoded = await this.jwt.verifyAsync(token);
+      const userId = decoded.sub;
+      return this.findOne(userId);
+    } catch (error) { throw new UnauthorizedException('Token invalide');}
   }
 
   // UPDATE + IMAGE

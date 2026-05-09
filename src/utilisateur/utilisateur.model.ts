@@ -30,11 +30,7 @@ export class Utilisateur {
   @Column({ nullable: true })
   contact!: string;
 
-  @Column({
-    type: 'text',
-    enum: UserRole,
-    default: UserRole.UTILISATEUR,
-  })
+  @Column({type: 'text', enum: UserRole, default: UserRole.UTILISATEUR,})
   role!: UserRole;
 
   @Column()
