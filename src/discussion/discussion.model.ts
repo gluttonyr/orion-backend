@@ -1,27 +1,43 @@
-import { Column, Entity, PrimaryGeneratedColumn, ManyToMany, JoinTable, OneToMany } from "typeorm";
-import { Utilisateur } from "../utilisateur/utilisateur.model";
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, } from "typeorm";
 import { Message } from "../message/message.model";
+import { DiscussionParticipant } from "../discussion-participant/discussion-participant.model";
+
+export enum DiscussionType { PRIVATE = "private", GROUP = "group", }
+export enum DiscussionStatus { ACTIVE = "active", ARCHIVED = "archived", BLOCKED = "blocked", }
 
 @Entity()
 export class Discussion {
-
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToMany(() => Utilisateur)
-  @JoinTable({
-    name: 'discussion_utilisateur',
-    joinColumn: { name: 'discussionId', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'utilisateurId', referencedColumnName: 'id' }
-  })
-  participants!: Utilisateur[];
+  @Column({ type: "text", enum: DiscussionType, default: DiscussionType.PRIVATE, })
+  type!: DiscussionType;
 
-  @OneToMany(() => Message, message => message.discussion)
+  @Column({ type: "text", enum: DiscussionStatus, default: DiscussionStatus.ACTIVE, })
+  statut!: DiscussionStatus;
+
+  @Column({ nullable: true })
+  titre!: string;
+
+  @Column({ nullable: true })
+  photo!: string;
+
+  // Dernier message rapide
+  @Column({ nullable: true })
+  lastMessage!: string;
+
+  @Column({ nullable: true })
+  lastMessageDate!: Date;
+
+  @OneToMany(() => Message, (message) => message.discussion)
   messages!: Message[];
 
-  @Column()
-  date_debut!: Date;
+  @OneToMany(() => DiscussionParticipant, (participant: any) => participant.discussion)
+  participants!: DiscussionParticipant[];
 
-  @Column({ default: 'active' })
-  statut!: string;
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
 }

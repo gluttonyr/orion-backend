@@ -32,6 +32,12 @@ export enum StatutCandidature {
   REFUSE = 'refusé',
 }
 
+export enum statutPayementCandidat {
+  EN_ATTENTE = 'en_attente',
+  EFFECTUE = 'effectue',
+  ANNULE = 'annule'
+}
+
 @Entity()
 export class Mission {
 
@@ -82,6 +88,23 @@ export class Mission {
   @Column()
   requis!: string;
 
-  @Column({ type: "text", enum: StatutCandidature, default: StatutCandidature.EN_ATTENTE })
-  candidatures?: Record<number, { user: number; statut: StatutCandidature }> | StatutCandidature.EN_ATTENTE;
+  /* 
+  * candidature : [
+    { userId: number, statut: StatutCandidature, dateCandidature: Date, message: string},
+  ]
+  */
+  @Column('simple-json', { nullable: true })
+  candidatures!: {
+    userId: number;
+    statut: StatutCandidature;
+    dateCandidature: Date;
+    experience: number;
+    paymentHistory: {
+      montant: number;
+      date: Date;
+      statut: statutPayementCandidat;
+    }[];
+    totalPaid: number;
+    message: string;
+  }[];
 }

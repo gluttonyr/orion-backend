@@ -1,9 +1,10 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Utilisateur } from "../utilisateur/utilisateur.model";
 
 export enum TypePlan {
-    GRATUIT = 'GRATUIT',
+    BASIQUE = 'BASIQUE',
     PREMIUM = 'PREMIUM',
+    BUSINESS = 'BUSINESS',
     PRO = 'PRO',
 }
 
@@ -15,7 +16,7 @@ export class Plan {
     @Column()
     titre!: string;
 
-    @Column({ type: 'text', enum: TypePlan, default: TypePlan.GRATUIT })
+    @Column({ type: 'text', enum: TypePlan, default: TypePlan.BASIQUE, unique: true })
     type!: TypePlan;
 
     @Column('decimal', { precision: 10, scale: 2 })
@@ -33,16 +34,25 @@ export class Plan {
     @Column()
     nombreProduits!: number;
 
-    @Column()
+    @Column({default: 1})
     dureeEnMois!: number;
 
-    @Column()
+    @Column({default: () => "CURRENT_TIMESTAMP"})
     dateCreation!: Date;
+    
+    @Column()
+    dateActivation!: Date;
 
     @Column()
     dateExpiration!: Date;
 
-    @ManyToOne(() => Utilisateur)
+    @OneToOne(() => Utilisateur)
     @JoinColumn({ name: 'utilisateurId' })
     commercant!: Utilisateur;
+
+    @Column({default: false})
+    active!: boolean
+
+    @Column({default: false})
+    renouvelement!: boolean
 }

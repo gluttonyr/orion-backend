@@ -7,15 +7,10 @@ export class DiscussionService {
   constructor(private readonly repo: DiscussionRepository) {}
 
   // CREATE
-  async create(data: Partial<Discussion>) {
-    const discussion = this.repo.create(data);
-    return this.repo.save(discussion);
-  }
+  async create(data: Partial<Discussion>) { const discussion = this.repo.create(data); return this.repo.save(discussion);}
 
   // GET ALL
-  async findAll() {
-    return this.repo.find();
-  }
+  async findAll() { return this.repo.find();}
 
   // GET ONE
   async findOne(id: number) {
