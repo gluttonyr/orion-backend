@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { Utilisateur } from "./utilisateur.model";
 import * as bcrypt from 'bcrypt';
 import { UtilisateurRepository } from "./utilisateur.repository";
@@ -67,15 +67,29 @@ export class UtilisateurService {
 
   // find user login
   async findloggedUser(token: string) {
+    let userId: number;
     try {
       const decoded = await this.jwt.verifyAsync(token);
-      const userId = decoded.sub;
-      return this.findOne(userId);
-    } catch (error) { throw new UnauthorizedException('Token invalide');}
+      userId = Number(decoded.sub);
+    } catch {
+      throw new UnauthorizedException('Token invalide ou expiré');
+    }
+    const user = await this.findOne(userId);
+    const { password: _, ...userWithoutPassword } = user;
+    return userWithoutPassword;
   }
 
   // UPDATE + IMAGE
-  async update(id: number, data: any, file?: Express.Multer.File) {
+  async update(id: number, data: any, file?: Express.Multer.File, token?: string) {
+    if (!token) throw new UnauthorizedException('Authentification requise');
+    let decoded: { sub: number };
+    try {
+      decoded = await this.jwt.verifyAsync(token);
+    } catch {
+      throw new UnauthorizedException('Token invalide');
+    }
+    if (Number(decoded.sub) !== id) throw new ForbiddenException('Vous ne pouvez modifier que votre propre profil');
+
     const user = await this.findOne(id);
 
     // Si image envoyée
@@ -92,7 +106,9 @@ export class UtilisateurService {
 
     Object.assign(user, data);
 
-    return this.repo.save(user);
+    const updatedUser = await this.repo.save(user);
+    const { password: _, ...userWithoutPassword } = updatedUser;
+    return userWithoutPassword;
   }
 
   // DELETE

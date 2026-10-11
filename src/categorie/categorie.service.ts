@@ -20,7 +20,17 @@ export class CategorieService {
 
   // GET ALL
   async findAll() {
-    return await this.repo.find();
+    const categories = await this.repo.find({ order: { id: 'ASC' } });
+    const defaults = [
+      'Électronique', 'Vêtements', 'Chaussures', 'Accessoires', 'Beauté et soins',
+      'Maison et décoration', 'Alimentation', 'Santé', 'Sports et loisirs', 'Bébé et enfant',
+      'Automobile et moto', 'Livres et fournitures', 'Informatique', 'Téléphones et tablettes', 'Autre',
+    ];
+    const existing = new Set(categories.map((category) => String((category as any)['libellé']).trim().toLocaleLowerCase()));
+    const missing = defaults.filter((libellé) => !existing.has(libellé.toLocaleLowerCase()));
+    if (!missing.length) return categories;
+    const added = await this.repo.save(missing.map((libellé) => this.repo.create({ libellé, dexcription: libellé })));
+    return [...categories, ...added];
   }
 
   // GET ONE

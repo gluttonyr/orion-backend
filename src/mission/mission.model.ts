@@ -20,6 +20,7 @@ export enum TypePaiement {
 }
 
 export enum StatutMission {
+  BROUILLON = 'brouillon',
   OUVERTE = 'ouverte',
   EN_COURS = 'en_cours',
   TERMINEE = 'terminée',
@@ -61,6 +62,10 @@ export class Mission {
   @Column({type: 'text', enum: StatutMission, default: StatutMission.OUVERTE })
   statut!: StatutMission;
 
+  // Keep existing published missions visible; all newly created missions are explicitly unpaid.
+  @Column({ type: 'boolean', default: true })
+  publicationPayee!: boolean;
+
   @Column()
   descriptionCourte!: string;
 
@@ -96,15 +101,15 @@ export class Mission {
   @Column('simple-json', { nullable: true })
   candidatures!: {
     userId: number;
-    statut: StatutCandidature;
+    statut: string;
     dateCandidature: Date;
-    experience: number;
-    paymentHistory: {
+    experience?: number;
+    paymentHistory?: {
       montant: number;
       date: Date;
       statut: statutPayementCandidat;
     }[];
-    totalPaid: number;
+    totalPaid?: number;
     message: string;
   }[];
 }

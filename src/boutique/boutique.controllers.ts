@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UploadedFile, UseInterceptors, Res, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, UploadedFile, UseInterceptors, Res, Req, Headers } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { BoutiqueService } from './boutique.service';
@@ -16,7 +16,8 @@ export class BoutiqueController {
   @UseInterceptors(FileInterceptor('logo'))
   async create(
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: any,) {
+    @Body() body: any,
+    @Headers('authorization') authorization: string) {
     console.log('Create Boutique - Received data:', body);
     console.log('Create Boutique - Received file:', file);
 
@@ -34,14 +35,15 @@ export class BoutiqueController {
       category: data.category,
       location: data.location,
 
-      logo: logoPath,
+      logo: logoPath ?? (typeof data.logo === 'string' ? data.logo : undefined),
 
       active: typeof data.active === 'string' ? data.active === 'true' : data.active,
 
       proprietaireId: data.proprietaireId ? Number(data.proprietaireId) : undefined,
     };
 
-    return this.boutiqueService.create(payload);
+    const token = authorization?.replace(/^Bearer\s+/i, '');
+    return this.boutiqueService.create(payload, token);
   }
 
   // Serve uploaded logos without adding a new dependency
@@ -53,6 +55,12 @@ export class BoutiqueController {
   // GET ALL
   @Get()
   async findAll() { return this.boutiqueService.findAll();}
+
+  @Get('mine')
+  async findMine(@Headers('authorization') authorization: string) {
+    const token = authorization?.replace(/^Bearer\s+/i, '');
+    return this.boutiqueService.findMine(token);
+  }
 
   // GET ONE
   @Get(':id')

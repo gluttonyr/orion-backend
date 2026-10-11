@@ -1,28 +1,28 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Controller, Get, Headers, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { PlanService } from './plan.service';
-import { Plan } from './plan.model';
+
+type SessionClaims = { sub: number; role?: string };
 
 @Controller('plan')
 export class PlanController {
-  constructor(private readonly planService: PlanService) {}
+  constructor(private readonly planService: PlanService, private readonly jwt: JwtService) {}
 
-  // CREATE
-  @Post()
-  async create(@Body() body: Partial<Plan>) { return this.planService.create(body);}
-
-  // GET ALL
   @Get()
-  findAll() { return this.planService.findAll();}
+  getCatalog() {
+    return this.planService.getCatalog();
+  }
 
-  // GET ONE
-  @Get(':id')
-  findOne(@Param('id') id: string) { return this.planService.findOne(Number(id));}
-
-  // UPDATE
-  @Put(':id')
-  update(@Param('id') id: string, @Body() body: Partial<Plan>) { return this.planService.update(Number(id), body);}
-
-  // DELETE
-  @Delete(':id')
-  remove(@Param('id') id: string) { return this.planService.remove(Number(id));}
+  @Get('current')
+  async getCurrent(@Headers('authorization') authorization?: string) {
+    const token = authorization?.replace(/^Bearer\s+/i, '');
+    if (!token) throw new UnauthorizedException('Connecte-toi pour consulter ton abonnement.');
+    let session: SessionClaims;
+    try { session = await this.jwt.verifyAsync<SessionClaims>(token); }
+    catch { throw new UnauthorizedException('Session invalide ou expirée.'); }
+    if (session.role !== 'COMMERCANT' || !Number.isInteger(Number(session.sub))) {
+      throw new UnauthorizedException('Un compte commerçant connecté est requis.');
+    }
+    return this.planService.getCurrentForMerchant(Number(session.sub));
+  }
 }

@@ -2,6 +2,7 @@ import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn } from "ty
 import { Utilisateur } from "../utilisateur/utilisateur.model";
 
 export enum TypePlan {
+    STANDARD = 'STANDARD',
     BASIQUE = 'BASIQUE',
     PREMIUM = 'PREMIUM',
     BUSINESS = 'BUSINESS',
@@ -16,7 +17,7 @@ export class Plan {
     @Column()
     titre!: string;
 
-    @Column({ type: 'text', enum: TypePlan, default: TypePlan.BASIQUE, unique: true })
+    @Column({ type: 'text', enum: TypePlan, default: TypePlan.STANDARD })
     type!: TypePlan;
 
     @Column('decimal', { precision: 10, scale: 2 })
@@ -43,8 +44,8 @@ export class Plan {
     @Column()
     dateActivation!: Date;
 
-    @Column()
-    dateExpiration!: Date;
+    @Column({ type: 'datetime', nullable: true })
+    dateExpiration!: Date | null;
 
     @OneToOne(() => Utilisateur)
     @JoinColumn({ name: 'utilisateurId' })

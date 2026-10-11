@@ -1,10 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from "typeorm";
-
-enum Categorie {
-  ELECTRONIQUE = "ELECTRONIQUE",
-  VETEMENTS = "VETEMENTS",
-  MAISON = "MAISON"
-}
+import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, RelationId } from "typeorm";
+import { Categorie } from '../categorie/categorie.model';
 
 @Entity()
 export class Produit {
@@ -33,9 +28,13 @@ export class Produit {
   @Column()
   statut!: string;
 
-  @Column({ type: 'text', enum: Categorie, default: Categorie.ELECTRONIQUE })
-  categorie!: Categorie;
+  @ManyToOne(() => Categorie, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'categorieId' })
+  categorie!: Categorie | null;
 
-  @Column({ nullable: true })
-  categorieId!: number;
+  @RelationId((produit: Produit) => produit.categorie)
+  categorieId?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  proprietaireId!: number | null;
 }

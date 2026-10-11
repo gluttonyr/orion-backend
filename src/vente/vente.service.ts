@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { VenteRepository } from './vente.repository';
 import { Vente } from './vente.model';
+import { In } from 'typeorm';
 
 @Injectable()
 export class VenteService {
@@ -18,6 +19,14 @@ export class VenteService {
   // GET ALL
   async findAll() {
     return await this.repo.find();
+  }
+
+  async findByUtilisateur(utilisateurId: number) {
+    return this.repo.find({
+      where: { utilisateurId, statut: In(['payee', 'remboursee']) },
+      relations: ['produits'],
+      order: { date_achat: 'DESC' },
+    });
   }
 
   // GET ONE

@@ -8,12 +8,30 @@ export class Vente {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToOne(() => Utilisateur)
+  @ManyToOne(() => Utilisateur, { nullable: true })
   @JoinColumn({ name: 'utilisateurId' })
-  utilisateur!: Utilisateur;
+  utilisateur!: Utilisateur | null;
 
-  @Column()
-  utilisateurId!: number;
+  @Column({ type: 'integer', nullable: true })
+  utilisateurId!: number | null;
+
+  @Column({ type: 'text', nullable: true, select: false })
+  clientPrenom!: string | null;
+
+  @Column({ type: 'text', nullable: true, select: false })
+  clientNom!: string | null;
+
+  @Column({ type: 'text', nullable: true, select: false })
+  clientEmail!: string | null;
+
+  @Column({ type: 'text', nullable: true, select: false })
+  clientTelephone!: string | null;
+
+  @Column({ type: 'text', nullable: true, select: false })
+  adresseLivraison!: string | null;
+
+  @Column({ type: 'integer', nullable: true })
+  liveSessionId!: number | null;
 
   @ManyToMany(() => Produit)
   @JoinTable({

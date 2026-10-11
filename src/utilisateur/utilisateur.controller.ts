@@ -25,7 +25,6 @@ export class UtilisateurController {
   @Get('auth/me')
   async findloggedUser(@Headers('authorization') authorization: string) {
     const token = authorization?.replace(/^Bearer\s+/i, '');
-    console.log("Token reçu dans le contrôleur:", token);
     return this.userService.findloggedUser(token);
   }
 
@@ -35,8 +34,12 @@ export class UtilisateurController {
   async update(
     @Param('id') id: string,
     @Body() body: any,
-    @UploadedFile() file: Express.Multer.File
-  ) { return this.userService.update(Number(id), body, file);}
+    @UploadedFile() file: Express.Multer.File,
+    @Headers('authorization') authorization: string
+  ) {
+    const token = authorization?.replace(/^Bearer\s+/i, '');
+    return this.userService.update(Number(id), body, file, token);
+  }
 
   // DELETE USER
   @Delete(':id')

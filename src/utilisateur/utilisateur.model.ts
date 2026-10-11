@@ -43,4 +43,7 @@ export class Utilisateur {
   @Column({ nullable: true })
   localisation!: string;
 
+  @Column({ nullable: true })
+  image!: string;
+
 }

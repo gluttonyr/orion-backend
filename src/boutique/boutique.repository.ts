@@ -19,6 +19,14 @@ export class BoutiqueRepository extends Repository<Boutique> {
     });
   }
 
+  async findBoutiquesByOwner(proprietaireId: number) {
+    return this.find({ where: { proprietaireId }, relations: ['produits'], order: { dateCreation: 'DESC' } });
+  }
+
+  async countBoutiquesByOwner(proprietaireId: number) {
+    return this.count({ where: { proprietaireId } });
+  }
+
   async findBoutiqueById(id: number) {
     return this.findOne({
       where: { id },

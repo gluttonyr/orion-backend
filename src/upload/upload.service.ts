@@ -52,6 +52,7 @@ export class UploadService {
   fs.writeFileSync(fullPath, file.buffer);
 } else if (file.path) {
   fs.copyFileSync(file.path, fullPath);
+  fs.unlinkSync(file.path);
 } else {
   throw new Error("Fichier invalide (ni buffer ni path)");
 }
