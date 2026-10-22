@@ -25,6 +25,9 @@ import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { BoutiqueCategorieModule } from './boutique-categorie/boutique-categorie.module';
 
+const bootstrapDatabase = process.env.DB_BOOTSTRAP === 'true';
+const isDevelopment = process.env.NODE_ENV === 'development';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -37,9 +40,9 @@ import { BoutiqueCategorieModule } from './boutique-categorie/boutique-categorie
       database: process.env.DB_NAME || 'orion_db',
       entities: [__dirname + '/**/*.model{.ts,.js}'],
       migrations: [__dirname + '/migrations/*{.ts,.js}'],
-      migrationsRun: true,
+      migrationsRun: !bootstrapDatabase && !isDevelopment,
       autoLoadEntities: true,
-      synchronize: process.env.DB_SYNCHRONIZE === 'true' && process.env.NODE_ENV !== 'production',
+      synchronize: bootstrapDatabase || (isDevelopment && process.env.DB_SYNCHRONIZE !== 'false'),
     }),
     AuthModule,
     UtilisateurModule,
