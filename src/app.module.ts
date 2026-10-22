@@ -19,18 +19,32 @@ import { PaiementModule } from './paiement/paiement.module';
 import { ShortModule } from './short/short.module';
 import { LiveSessionModule } from './live/live-session.module';
 import { PlanModule } from './plan/plan.module';
+import { NotificationModule } from './notification/notification.module';
+import { PlateformeModule } from './plateforme/plateforme.module';
+import { AdminModule } from './admin/admin.module';
+import { AuthModule } from './auth/auth.module';
+import { BoutiqueCategorieModule } from './boutique-categorie/boutique-categorie.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRoot({
-      type: 'sqlite',
-      database: 'orion_db.sqlite', // nom du fichier
+      type: 'postgres',
+      host: process.env.DB_HOST || 'localhost',
+      port: Number(process.env.DB_PORT || 5432),
+      username: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME || 'orion_db',
       entities: [__dirname + '/**/*.model{.ts,.js}'],
+      migrations: [__dirname + '/migrations/*{.ts,.js}'],
+      migrationsRun: true,
       autoLoadEntities: true,
-      synchronize: true,}),
+      synchronize: process.env.DB_SYNCHRONIZE === 'true' && process.env.NODE_ENV !== 'production',
+    }),
+    AuthModule,
     UtilisateurModule,
     CategorieModule,
+    BoutiqueCategorieModule,
     VenteModule,
     ProduitModule,
     DemandeModule,
@@ -44,7 +58,11 @@ import { PlanModule } from './plan/plan.module';
     PaiementModule,
     ShortModule,
     LiveSessionModule,
-    PlanModule],
+    PlanModule,
+    NotificationModule,
+    PlateformeModule,
+    AdminModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

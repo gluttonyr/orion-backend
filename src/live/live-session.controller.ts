@@ -1,11 +1,14 @@
 import { Body, Controller, Get, Headers, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { LiveSessionService, type StartLiveSessionDto } from './live-session.service';
+import { Public } from '../auth/public.decorator';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('live/sessions')
 export class LiveSessionController {
   constructor(private readonly liveService: LiveSessionService) {}
 
   @Post('start')
+  @Roles('COMMERCANT')
   start(
     @Headers('authorization') authorization: string,
     @Body() body: StartLiveSessionDto,
@@ -22,21 +25,25 @@ export class LiveSessionController {
   }
 
   @Get('current')
+  @Public()
   current(@Headers('authorization') authorization: string) {
     return this.liveService.current(authorization);
   }
 
   @Get('public/creator/:ownerId')
+  @Public()
   publicCurrent(@Param('ownerId', ParseIntPipe) ownerId: number) {
     return this.liveService.publicCurrent(ownerId);
   }
 
   @Get('history')
+  @Roles('COMMERCANT')
   history(@Headers('authorization') authorization: string) {
     return this.liveService.history(authorization);
   }
 
   @Get(':id/results')
+  @Roles('COMMERCANT')
   results(
     @Headers('authorization') authorization: string,
     @Param('id', ParseIntPipe) id: number,
@@ -45,6 +52,7 @@ export class LiveSessionController {
   }
 
   @Post(':id/products/:productId/visit')
+  @Public()
   visit(
     @Param('id', ParseIntPipe) id: number,
     @Param('productId', ParseIntPipe) productId: number,

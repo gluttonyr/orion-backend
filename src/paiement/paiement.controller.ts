@@ -6,6 +6,7 @@ import { FedaPayService, type FedaPayCheckoutDto } from './fedapay.service';
 import { TransactionService } from '../transaction/transaction.service';
 import { TransactionStatus } from '../transaction/transaction.model';
 import { UtilisateurService } from '../utilisateur/utilisateur.service';
+import { Public } from '../auth/public.decorator';
 
 @Controller('paiement')
 export class PaiementController {
@@ -15,6 +16,11 @@ export class PaiementController {
     private readonly transactionService: TransactionService,
     private readonly utilisateurService: UtilisateurService,
   ) {}
+
+  private publicTransaction<T extends { paymentToken?: unknown; notifyToken?: unknown }>(transaction: T) {
+    const { paymentToken: _paymentToken, notifyToken: _notifyToken, ...safeTransaction } = transaction;
+    return safeTransaction;
+  }
 
   @Post('fedapay/init-payment')
   async initFedaPayPayment(
@@ -40,6 +46,7 @@ export class PaiementController {
   }
 
   @Post('fedapay/webhook')
+  @Public()
   @HttpCode(200)
   fedapayWebhook(
     @Req() request: RawBodyRequest<Request>,
@@ -52,14 +59,16 @@ export class PaiementController {
   }
 
   @Get('fedapay/check/:reference')
-  checkFedaPay(@Param('reference') reference: string) {
-    return this.fedapayService.check(reference);
+  @Public()
+  async checkFedaPay(@Param('reference') reference: string) {
+    return this.publicTransaction(await this.fedapayService.check(reference));
   }
 
   // Webhook CinetPay (notify_url). Le nom exact des champs (merchant_transaction_id,
   // status, notify_token...) reste à confirmer avec la doc "Notification de
   // transaction" : on tente plusieurs noms plausibles en attendant.
   @Post('notify')
+  @Public()
   @HttpCode(200)
   async notify(@Body() body: any) {
     console.log('Webhook CinetPay reçu:', body);
@@ -95,17 +104,18 @@ export class PaiementController {
   // base (posé par le webhook), avec une revérification CinetPay en secours
   // si le webhook n'est pas encore arrivé.
   @Get('check/:reference')
+  @Public()
   async check(@Param('reference') reference: string) {
     const transaction = await this.transactionService.findByReference(reference);
 
     if (transaction.status === TransactionStatus.PENDING) {
       try {
-        return await this.cinetpayService.confirmPayment(reference);
+        return this.publicTransaction(await this.cinetpayService.confirmPayment(reference));
       } catch (e) {
         console.error('Vérification CinetPay indisponible:', e);
       }
     }
 
-    return transaction;
+    return this.publicTransaction(transaction);
   }
 }

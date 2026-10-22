@@ -30,4 +30,7 @@ export class Panier {
 
     @Column({ default: 'en_cours' })
     statut!: string;
+
+    @Column({ type: 'jsonb', default: () => "'[]'::jsonb" })
+    itemsJson!: Array<{ productId: number; quantity: number }>;
 }

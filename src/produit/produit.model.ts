@@ -19,6 +19,9 @@ export class Produit {
   @Column('float')
   prix!: number;
 
+  @Column('float', { nullable: true })
+  prixPromotionnel!: number | null;
+
   @Column()
   description!: string;
 
@@ -37,4 +40,12 @@ export class Produit {
 
   @Column({ type: 'integer', nullable: true })
   proprietaireId!: number | null;
+}
+
+export function getProductSellingPrice(product: Pick<Produit, 'prix' | 'prixPromotionnel'>): number {
+  const regularPrice = Number(product.prix);
+  const promotionalPrice = Number(product.prixPromotionnel);
+  return Number.isFinite(promotionalPrice) && promotionalPrice > 0 && promotionalPrice < regularPrice
+    ? promotionalPrice
+    : regularPrice;
 }

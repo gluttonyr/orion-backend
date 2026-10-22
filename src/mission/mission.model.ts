@@ -1,21 +1,13 @@
 import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from "typeorm";
 import { Utilisateur } from "../utilisateur/utilisateur.model";
 
-export enum TypeMission {
-  AUTRE = 'autre',
-  EMPLOI = 'emploi',
-  SERVICE = 'service',
-  MISSION = 'mission',
-  FORMATION = 'formation',
-  FREELANCE = 'freelance',
-  LIVRAISON = 'livraison',
-}
-
 export enum TypePaiement {
   FIXE = 'fixe',
   HORAIRE = 'horaire',
   JOURNALIER = 'journalier',
+  HEBDOMADAIRE = 'hebdomadaire',
   MENSUEL = 'mensuel',
+  ANNUEL = 'annuel',
   PROJET = 'projet',
 }
 
@@ -56,10 +48,10 @@ export class Mission {
   @Column()
   localisation!: string;
 
-  @Column({ type: 'text', enum: TypeMission, default: TypeMission.AUTRE })
-  type!: TypeMission;
+  @Column({ type: 'varchar', length: 100, default: 'Mission rémunérée' })
+  type!: string;
   
-  @Column({type: 'text', enum: StatutMission, default: StatutMission.OUVERTE })
+  @Column({ type: 'enum', enum: StatutMission, default: StatutMission.OUVERTE })
   statut!: StatutMission;
 
   // Keep existing published missions visible; all newly created missions are explicitly unpaid.
@@ -76,7 +68,7 @@ export class Mission {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   montant!: number;
 
-  @Column({ type: 'text', enum: TypePaiement, default: TypePaiement.FIXE })
+  @Column({ type: 'enum', enum: TypePaiement, default: TypePaiement.FIXE })
   frequencePaiement!: TypePaiement;
 
   // Durée de la mission en mois
@@ -111,5 +103,6 @@ export class Mission {
     }[];
     totalPaid?: number;
     message: string;
+    discussionId?: number;
   }[];
 }

@@ -1,6 +1,8 @@
 import { Body, Controller, Delete, Get, Headers, Param, Post, Put } from '@nestjs/common';
 import { MissionService } from './mission.service';
 import { Mission } from './mission.model';
+import { Public } from '../auth/public.decorator';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('mission')
 export class MissionController {
@@ -8,6 +10,7 @@ export class MissionController {
 
   // CREATE
   @Post()
+  @Roles('COMMERCANT')
   create(@Body() body: Mission, @Headers('authorization') authorization: string) {
     return this.missionService.create(body, authorization?.replace(/^Bearer\s+/i, ''));
   }
@@ -15,6 +18,11 @@ export class MissionController {
   @Get('mine')
   findMine(@Headers('authorization') authorization: string) {
     return this.missionService.findMine(authorization?.replace(/^Bearer\s+/i, ''));
+  }
+
+  @Get('applications/me')
+  findMyApplications(@Headers('authorization') authorization: string) {
+    return this.missionService.findMyApplications(authorization?.replace(/^Bearer\s+/i, ''));
   }
 
 
@@ -45,24 +53,28 @@ export class MissionController {
 
   // GET ALL
   @Get()
+  @Public()
   findAll() {
     return this.missionService.findAll();
   }
 
   // GET ONE
   @Get(':id')
+  @Public()
   findOne(@Param('id') id: string, @Headers('authorization') authorization: string) {
     return this.missionService.findOne(Number(id), authorization?.replace(/^Bearer\s+/i, ''));
   }
 
   // UPDATE
   @Put(':id')
+  @Roles('COMMERCANT')
   update(@Param('id') id: string, @Body() body: Partial<Mission>, @Headers('authorization') authorization: string) {
     return this.missionService.update(Number(id), body, authorization?.replace(/^Bearer\s+/i, ''));
   }
 
   // DELETE
   @Delete(':id')
+  @Roles('COMMERCANT')
   remove(@Param('id') id: string, @Headers('authorization') authorization: string) {
     return this.missionService.remove(Number(id), authorization?.replace(/^Bearer\s+/i, ''));
   }

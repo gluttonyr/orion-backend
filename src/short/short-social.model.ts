@@ -45,7 +45,7 @@ export class ShortComment {
   @Column()
   utilisateurId!: number;
 
-  @Column({ type: 'text', length: 1000 })
+  @Column('text')
   contenu!: string;
 
   @CreateDateColumn()

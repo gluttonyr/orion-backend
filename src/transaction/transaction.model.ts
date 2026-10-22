@@ -34,7 +34,7 @@ export class Transaction {
   @Column('float')
   amount!: number;
 
-  @Column({ type: 'text', enum: TransactionStatus, default: TransactionStatus.PENDING })
+  @Column({ type: 'enum', enum: TransactionStatus, default: TransactionStatus.PENDING })
   status!: TransactionStatus;
 
   @Column({ nullable: true })

@@ -10,10 +10,10 @@ export class Discussion {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: "text", enum: DiscussionType, default: DiscussionType.PRIVATE, })
+  @Column({ type: 'enum', enum: DiscussionType, default: DiscussionType.PRIVATE })
   type!: DiscussionType;
 
-  @Column({ type: "text", enum: DiscussionStatus, default: DiscussionStatus.ACTIVE, })
+  @Column({ type: 'enum', enum: DiscussionStatus, default: DiscussionStatus.ACTIVE })
   statut!: DiscussionStatus;
 
   @Column({ nullable: true })

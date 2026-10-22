@@ -38,10 +38,10 @@ export class Message {
   @Column("text")
   contenu!: string;
 
-  @Column({ type: "text", enum: MessageType, default: MessageType.TEXT, })
+  @Column({ type: 'enum', enum: MessageType, default: MessageType.TEXT })
   type!: MessageType;
 
-  @Column({ type: "text", enum: MessageStatus, default: MessageStatus.SENT, })
+  @Column({ type: 'enum', enum: MessageStatus, default: MessageStatus.SENT })
   statut!: MessageStatus;
 
   // image/fichier/video

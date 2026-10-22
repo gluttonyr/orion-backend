@@ -5,10 +5,13 @@ import { MissionService } from './mission.service';
 import { MissionController } from './mission.controller';
 import { MissionRepository } from './mission.repository';
 import { Utilisateur } from '../utilisateur/utilisateur.model';
-import { JwtModule } from '@nestjs/jwt';
+import { MissionTypeModule } from '../mission-type/mission-type.module';
+import { NotificationModule } from '../notification/notification.module';
+import { DiscussionModule } from '../discussion/discussion.module';
+import { DiscussionParticipantModule } from '../discussion-participant/discussion-participant.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Mission, Utilisateur]), JwtModule.register({ secret: process.env.JWT_SECRET || 'orion_secret_key' })],
+  imports: [TypeOrmModule.forFeature([Mission, Utilisateur]), MissionTypeModule, NotificationModule, DiscussionModule, DiscussionParticipantModule],
   controllers: [MissionController],
   providers: [MissionService, MissionRepository],
   exports: [MissionRepository, MissionService],

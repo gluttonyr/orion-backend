@@ -31,6 +31,17 @@
 $ npm install
 ```
 
+## PostgreSQL and authentication
+
+Set `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME` in `.env` for a
+PostgreSQL database. Start the included local database with `docker compose up -d postgres`.
+`DB_SYNCHRONIZE=true` is intended for
+local development only; keep it false in production and use database migrations
+before deploying schema changes. Set a unique `JWT_SECRET` of at least 32
+characters and keep it private. The API requires a bearer JWT by default; only
+the explicitly marked catalogue, login, registration, media, and payment callback
+routes are public.
+
 ## Compile and run the project
 
 ```bash

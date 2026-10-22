@@ -7,11 +7,13 @@ import {
 import type { Response } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
+import { Public } from '../auth/public.decorator';
 
 @Controller('upload')
 export class UploadController {
 
   @Get('*path')
+  @Public()
   getImage(@Param('path') requestedPath: string | string[], @Res() res: Response) {
     const uploadRoot = path.resolve(process.env.UPLOAD_PATH || './uploads');
     const relativePath = Array.isArray(requestedPath) ? path.join(...requestedPath) : requestedPath;

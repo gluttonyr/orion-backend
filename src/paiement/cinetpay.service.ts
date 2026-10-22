@@ -5,6 +5,8 @@ import { VenteService } from '../vente/vente.service';
 import { ProduitService } from '../produit/produit.service';
 import { TransactionService } from '../transaction/transaction.service';
 import { TransactionStatus } from '../transaction/transaction.model';
+import { getProductSellingPrice } from '../produit/produit.model';
+import { NotificationService } from '../notification/notification.service';
 
 export interface InitPaymentDto {
   utilisateurId: number;
@@ -42,6 +44,7 @@ export class CinetpayService {
     private readonly produitService: ProduitService,
     private readonly transactionService: TransactionService,
     private readonly config: ConfigService,
+    private readonly notificationService: NotificationService,
   ) { }
 
   private getBaseUrl() {
@@ -94,13 +97,15 @@ export class CinetpayService {
       throw new BadRequestException('produitIds et quantites doivent être des tableaux non vides de même longueur');
     }
 
-    const produits = await Promise.all(input.produitIds.map((id) => this.produitService.findOne(id)));
-    const totalPrice = produits.reduce((sum, produit, index) => sum + produit.prix * input.quantites[index], 0);
+    const produits = await Promise.all(input.produitIds.map((id) => this.produitService.findPublishedOne(id)));
+    const unitPrices = produits.map(getProductSellingPrice);
+    const totalPrice = unitPrices.reduce((sum, unitPrice, index) => sum + unitPrice * input.quantites[index], 0);
 
     const vente = await this.venteService.create({
       utilisateurId: input.utilisateurId,
       produits,
       quantites: input.quantites,
+      prix_unitaires: unitPrices,
       date_achat: new Date(),
       prix_total: totalPrice,
       statut: 'en_attente',
@@ -178,6 +183,8 @@ export class CinetpayService {
     const transaction = await this.transactionService.findByReference(merchantTransactionId);
 
     if (transaction.status !== TransactionStatus.PENDING) {
+      if (transaction.status === TransactionStatus.SUCCESS && transaction.vente) await this.notificationService.notifyOrderPaid(transaction.vente);
+      if (transaction.status === TransactionStatus.REFUNDED && transaction.vente) await this.notificationService.notifyRefund(transaction.vente);
       return transaction;
     }
     if (!transaction.venteId || !transaction.vente) {
@@ -199,11 +206,13 @@ export class CinetpayService {
     if (isSuccess) {
       // produits et quantites sont alignés par index sur la vente d'origine
       const vente = transaction.vente;
+      await this.venteService.createPaidRemises(vente.id, vente.produits ?? [], vente.quantites ?? [], vente.prix_unitaires ?? undefined);
       for (let i = 0; i < vente.produits.length; i++) {
         const produit = vente.produits[i];
         const quantite = vente.quantites[i] ?? 1;
         await this.produitService.update(produit.id, { stock: Math.max(0, produit.stock - quantite) });
       }
+      await this.notificationService.notifyOrderPaid(vente);
     }
 
     return saved;

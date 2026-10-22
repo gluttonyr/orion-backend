@@ -9,18 +9,21 @@ import { ConfigService } from '@nestjs/config';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Webhook } from 'fedapay';
 import { randomUUID } from 'crypto';
-import { DataSource, EntityManager } from 'typeorm';
-import { Produit } from '../produit/produit.model';
+import { DataSource, EntityManager, In } from 'typeorm';
+import { getProductSellingPrice, Produit } from '../produit/produit.model';
 import { ProduitService } from '../produit/produit.service';
 import { Transaction, TransactionStatus } from '../transaction/transaction.model';
 import { TransactionService } from '../transaction/transaction.service';
 import { VenteService } from '../vente/vente.service';
 import { LiveSessionService } from '../live/live-session.service';
 import { Vente } from '../vente/vente.model';
+import { VenteRemise } from '../vente/vente-remise.model';
 import { UtilisateurService } from '../utilisateur/utilisateur.service';
 import { MissionService } from '../mission/mission.service';
 import { Mission, StatutMission } from '../mission/mission.model';
 import { TransactionPurpose } from '../transaction/transaction.model';
+import { NotificationService } from '../notification/notification.service';
+import { PlateformeFinanceService } from '../plateforme/plateforme-finance.service';
 
 export interface FedaPayCheckoutDto {
   produitIds: number[];
@@ -41,7 +44,9 @@ export class FedaPayService {
     private readonly liveSessionService: LiveSessionService,
     private readonly utilisateurService: UtilisateurService,
     private readonly missionService: MissionService,
+    private readonly notificationService: NotificationService,
     @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly plateformeFinance: PlateformeFinanceService,
   ) {}
 
   private get apiKey() {
@@ -147,7 +152,7 @@ export class FedaPayService {
       throw new ServiceUnavailableException('APP_BASE_URL doit être une URL HTTP ou HTTPS valide');
     }
 
-    const products = await Promise.all(input.produitIds.map((id) => this.produitService.findOne(Number(id))));
+    const products = await Promise.all(input.produitIds.map((id) => this.produitService.findPublishedOne(Number(id))));
     if (products.some((product, index) => input.quantites[index] > product.stock)) {
       throw new BadRequestException('Le stock est insuffisant pour un ou plusieurs produits');
     }
@@ -164,7 +169,7 @@ export class FedaPayService {
     }
 
     const total = products.reduce(
-      (sum, product, index) => sum + Number(product.prix) * Number(input.quantites[index]),
+      (sum, product, index) => sum + getProductSellingPrice(product) * Number(input.quantites[index]),
       0,
     );
     if (!Number.isSafeInteger(total) || total <= 0) {
@@ -179,6 +184,7 @@ export class FedaPayService {
       adresseLivraison: customer.adresse.trim(),
       produits: products,
       quantites: input.quantites.map(Number),
+      prix_unitaires: products.map(getProductSellingPrice),
       date_achat: new Date(),
       prix_total: total,
       statut: 'en_attente',
@@ -428,10 +434,15 @@ export class FedaPayService {
     if (!transaction.vente) throw new BadRequestException('Détails de commande absents de la transaction');
     const sale = transaction.vente;
     if (status === 'refunded') {
-      return this.dataSource.transaction(async (manager) => {
+      const saved = await this.dataSource.transaction(async (manager) => {
         if (transaction.status === TransactionStatus.SUCCESS) {
-          await manager.update(Transaction, { id: transaction.id, status: TransactionStatus.SUCCESS }, { status: TransactionStatus.REFUNDED });
+          const claim = await manager.update(Transaction, { id: transaction.id, status: TransactionStatus.SUCCESS }, { status: TransactionStatus.REFUNDED });
+          if (claim.affected) {
+            const remises = await manager.find(VenteRemise, { where: { venteId: transaction.venteId } });
+            for (const remise of remises) await this.plateformeFinance.reverseCommission(manager, remise.commissionMontant ?? 0);
+          }
           await manager.update(Vente, transaction.venteId, { statut: 'remboursee' });
+          await manager.update(VenteRemise, { venteId: transaction.venteId, statut: In(['bloquee', 'liberee']) }, { statut: 'remboursee', qrTokenHash: null });
         } else if (transaction.status === TransactionStatus.PENDING) {
           const claim = await manager.update(
             Transaction,
@@ -448,9 +459,13 @@ export class FedaPayService {
         if (!saved) throw new BadRequestException('Transaction locale introuvable après remboursement FedaPay');
         return saved;
       });
+      if (transaction.status === TransactionStatus.SUCCESS) {
+        await this.notificationService.notifyRefund(sale);
+      }
+      return saved;
     }
     if (status === 'approved' || status === 'transferred') {
-      return this.dataSource.transaction(async (manager) => {
+      const saved = await this.dataSource.transaction(async (manager) => {
         if (!transaction.stockReserved) {
           await this.reserveSaleStockInManager(manager, sale.produits, sale.quantites);
         }
@@ -468,6 +483,7 @@ export class FedaPayService {
           return saved;
         }
         await manager.update(Vente, transaction.venteId, { statut: 'payee' });
+        await this.createSellerRemises(manager, sale);
         const saved = await manager.findOne(Transaction, {
           where: { id: transaction.id },
           relations: ['vente', 'vente.produits'],
@@ -475,6 +491,8 @@ export class FedaPayService {
         if (!saved) throw new BadRequestException('Transaction locale introuvable après confirmation FedaPay');
         return saved;
       });
+      await this.notificationService.notifyOrderPaid(sale);
+      return saved;
     }
     if (status === 'canceled' || status === 'cancelled' || status === 'declined') {
       return this.dataSource.transaction(async (manager) => {
@@ -496,6 +514,31 @@ export class FedaPayService {
       });
     }
     return transaction;
+  }
+
+  private async createSellerRemises(manager: EntityManager, sale: Vente) {
+    const totals = new Map<number, { montant: number; articles: Array<{ produitId: number; nom: string; quantite: number; prixUnitaire: number }> }>();
+    (sale.produits ?? []).forEach((product, index) => {
+      if (!product.proprietaireId) return;
+      const quantity = Number(sale.quantites[index] ?? 1);
+      const summary = totals.get(product.proprietaireId) ?? { montant: 0, articles: [] };
+      const unitPrice = Number(sale.prix_unitaires?.[index] ?? getProductSellingPrice(product));
+      summary.montant += Math.round(unitPrice * quantity);
+      summary.articles.push({ produitId: product.id, nom: product.nom, quantite: quantity, prixUnitaire: unitPrice });
+      totals.set(product.proprietaireId, summary);
+    });
+    const repo = manager.getRepository(VenteRemise);
+    const rate = await this.plateformeFinance.getCommissionRate(manager);
+    for (const [commercantId, summary] of totals) {
+      const commission = Math.round(summary.montant * rate / 100);
+      const existing = await repo.findOne({ where: { venteId: sale.id, commercantId } });
+      if (!existing) await this.plateformeFinance.creditCommission(manager, commission);
+      await repo.upsert({
+        venteId: sale.id, commercantId, montant: summary.montant - commission,
+        montantBrut: summary.montant, commissionMontant: commission, commissionPourcentage: rate,
+        articlesJson: JSON.stringify(summary.articles), statut: 'bloquee', qrTokenHash: null, dateRemise: null,
+      }, ['venteId', 'commercantId']);
+    }
   }
 
   private async reserveSaleStockInManager(manager: EntityManager, products: Produit[], quantities: number[]) {

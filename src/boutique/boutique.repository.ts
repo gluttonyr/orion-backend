@@ -41,13 +41,13 @@ export class BoutiqueRepository extends Repository<Boutique> {
 
   async deleteBoutique(id: number) { return this.delete(id);}
 
-  // methode privee et auto de calcul de la limite de produits par boutique
+  // Vérifie la limite du forfait Standard pour les produits associés à la boutique.
   private async checkBoutiqueProductLimit(boutiqueId: number) {
     const boutique = await this.findBoutiqueById(boutiqueId);
     if (!boutique) {
       throw new Error('Boutique non trouvée.');}
-    if (boutique.nombreProduits >= 30) {
-      throw new Error('La boutique a atteint la limite de ' + boutique.nombreProduits + ' produits.');}
+    if (boutique.produits.length >= 40) {
+      throw new Error('La boutique a atteint la limite de 40 produits de l’abonnement Standard.');}
   }
 
   async addProduitToBoutique(boutiqueId: number, produitId: number) {
@@ -57,8 +57,6 @@ export class BoutiqueRepository extends Repository<Boutique> {
       throw new Error('Boutique non trouvée.');}
     if (boutique.produits.some(p => p.id === produitId)) {
       throw new Error('Le produit est déjà dans la boutique.');}
-    if (boutique.produits.length <= boutique.nombreProduits) {
-      throw new Error('La boutique a atteint la limite de ' + boutique.nombreProduits + ' produits.');}
     boutique.produits.push({ id: produitId } as any); // Assurez-vous que le type correspond à votre entité Produit
     boutique.nombreProduits += 1; // Incrémenter le nombre de produits
     return this.save(boutique);

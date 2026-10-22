@@ -17,6 +17,7 @@ import type { Response } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ShortService } from './short.service';
+import { Public } from '../auth/public.decorator';
 
 @Controller('shorts')
 export class ShortController {
@@ -41,6 +42,7 @@ export class ShortController {
   }
 
   @Get()
+  @Public()
   feed(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -55,6 +57,7 @@ export class ShortController {
   }
 
   @Get('creator/:auteurId')
+  @Public()
   getCreatorProfile(
     @Param('auteurId', ParseIntPipe) auteurId: number,
     @Headers('authorization') authorization: string,
@@ -63,6 +66,7 @@ export class ShortController {
   }
 
   @Get(':id')
+  @Public()
   getById(@Param('id', ParseIntPipe) id: number, @Headers('authorization') authorization: string) {
     return this.shortService.getById(id, authorization?.replace(/^Bearer\s+/i, ''));
   }
@@ -73,6 +77,7 @@ export class ShortController {
   }
 
   @Get(':id/comments')
+  @Public()
   getComments(
     @Param('id', ParseIntPipe) id: number,
     @Query('page') page?: string,
@@ -110,6 +115,7 @@ export class ShortController {
   }
 
   @Get(':id/cover')
+  @Public()
   async cover(@Param('id', ParseIntPipe) id: number, @Res() response: Response) {
     const filePath = await this.shortService.coverFile(id);
     if (!fs.existsSync(filePath)) return response.sendStatus(404);
@@ -117,6 +123,7 @@ export class ShortController {
   }
 
   @Get(':id/video')
+  @Public()
   async video(
     @Param('id', ParseIntPipe) id: number,
     @Headers('range') range: string | undefined,

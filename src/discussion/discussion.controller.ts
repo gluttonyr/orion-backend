@@ -1,6 +1,9 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Req, UnauthorizedException } from '@nestjs/common';
 import { DiscussionService } from './discussion.service';
 import { Discussion } from './discussion.model';
+import type { Request } from 'express';
+
+type AuthenticatedRequest = Request & { user?: { sub?: string | number } };
 
 @Controller('api/discussion')
 export class DiscussionController {
@@ -12,7 +15,11 @@ export class DiscussionController {
 
   // GET ALL
   @Get()
-  findAll() { return this.discussionService.findAll(); }
+  findAll(@Req() request: AuthenticatedRequest) {
+    const userId = Number(request.user?.sub);
+    if (!Number.isSafeInteger(userId) || userId <= 0) throw new UnauthorizedException('Session invalide.');
+    return this.discussionService.findForUser(userId);
+  }
 
   // GET ONE
   @Get(':id')

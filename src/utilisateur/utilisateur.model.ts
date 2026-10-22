@@ -1,11 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
 
 export enum UserRole {
   UTILISATEUR = 'UTILISATEUR',
   COMMERCANT = 'COMMERCANT',
+  ADMIN = 'ADMIN',
 }
 
 @Entity()
+@Index(['email'], { unique: true })
 export class Utilisateur {
 
   @PrimaryGeneratedColumn()
@@ -21,16 +23,16 @@ export class Utilisateur {
   @Column()
   email!: string;
 
-  @Column()
+  @Column({ nullable: true })
   date_naissance!: string;
 
-  @Column()
+  @Column({ nullable: true })
   adresse!: string;
   
   @Column({ nullable: true })
   contact!: string;
 
-  @Column({type: 'text', enum: UserRole, default: UserRole.UTILISATEUR,})
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.UTILISATEUR })
   role!: UserRole;
 
   @Column()
@@ -42,6 +44,9 @@ export class Utilisateur {
 
   @Column({ nullable: true })
   localisation!: string;
+
+  @Column({ nullable: true })
+  pays!: string;
 
   @Column({ nullable: true })
   image!: string;

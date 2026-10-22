@@ -5,11 +5,11 @@ import { BoutiqueController } from './boutique.controllers';
 import { BoutiqueService } from './boutique.service';
 import { BoutiqueRepository } from './boutique.repository';
 import { UploadModule } from '../upload/upload.module';
-import { JwtModule } from '@nestjs/jwt';
 import { PlanModule } from '../plan/plan.module';
+import { BoutiqueCategorieModule } from '../boutique-categorie/boutique-categorie.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Boutique]), UploadModule, PlanModule, JwtModule.register({ secret: process.env.JWT_SECRET || 'orion_secret_key' })],
+  imports: [TypeOrmModule.forFeature([Boutique]), UploadModule, PlanModule, BoutiqueCategorieModule],
   controllers: [BoutiqueController],
   providers: [BoutiqueService, BoutiqueRepository],
   exports: [BoutiqueService],

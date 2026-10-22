@@ -12,4 +12,4 @@ import { DiscussionParticipant } from './discussion-participant.model';
   exports: [DiscussionParticipantRepository],
 })
 
-export class DiscussionModule {}
+export class DiscussionParticipantModule {}

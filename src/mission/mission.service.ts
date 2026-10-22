@@ -5,6 +5,11 @@ import { Repository } from 'typeorm';
 import { Mission, StatutCandidature, StatutMission } from './mission.model';
 import { MissionRepository } from './mission.repository';
 import { Utilisateur } from '../utilisateur/utilisateur.model';
+import { MissionTypeService } from '../mission-type/mission-type.service';
+import { NotificationService } from '../notification/notification.service';
+import { DiscussionRepository } from '../discussion/discussion.repository';
+import { DiscussionType } from '../discussion/discussion.model';
+import { DiscussionParticipantRepository } from '../discussion-participant/discussion-participant.repository';
 
 type SessionClaims = { sub: number; role?: string };
 type CandidateStatus = 'acceptee' | 'refusee';
@@ -15,6 +20,10 @@ export class MissionService {
     private readonly missions: MissionRepository,
     private readonly jwt: JwtService,
     @InjectRepository(Utilisateur) private readonly users: Repository<Utilisateur>,
+    private readonly missionTypes: MissionTypeService,
+    private readonly notifications: NotificationService,
+    private readonly discussions: DiscussionRepository,
+    private readonly discussionParticipants: DiscussionParticipantRepository,
   ) {}
 
   private async getSession(token?: string, role?: string): Promise<SessionClaims> {
@@ -39,6 +48,7 @@ export class MissionService {
     const merchant = await this.users.findOne({ where: { id: Number(sub) } });
     if (!merchant) throw new NotFoundException('Compte commerçant introuvable');
     const { statut: _requestedStatus, publicationPayee: _requestedPayment, ...details } = body;
+    details.type = await this.missionTypes.assertExists(details.type ?? 'Mission rémunérée');
     return this.missions.save(this.missions.create({
       ...details, commercant: merchant, candidatures: [], statut: StatutMission.BROUILLON, publicationPayee: false,
     }));
@@ -64,6 +74,24 @@ export class MissionService {
     return missions;
   }
 
+  async findMyApplications(token?: string) {
+    const { sub } = await this.getSession(token, 'UTILISATEUR');
+    const missions = await this.missions.find({
+      relations: ['commercant'],
+      order: { datePublication: 'DESC' },
+    });
+    return missions.flatMap((mission) => {
+      const application = (mission.candidatures ?? []).find((candidate) => candidate.userId === Number(sub));
+      if (!application) return [];
+      const { candidatures: _candidatures, ...missionDetails } = mission;
+      return [{
+        ...missionDetails,
+        candidature: application,
+        commercant: mission.commercant ? this.publicUser(mission.commercant) : null,
+      }];
+    });
+  }
+
   async findOne(id: number, token?: string) {
     const mission = await this.missions.findOne({ where: { id }, relations: ['commercant'] });
     if (!mission) return null;
@@ -72,7 +100,11 @@ export class MissionService {
       const { sub } = await this.getSession(token, 'COMMERCANT');
       if (mission.commercant?.id !== Number(sub)) throw new NotFoundException(`Mission avec id ${id} introuvable`);
     }
-    return { ...mission, candidatures: [] };
+    return {
+      ...mission,
+      commercant: mission.commercant ? this.publicUser(mission.commercant) : null,
+      candidatures: [],
+    };
   }
 
   async apply(id: number, message: string, token?: string) {
@@ -93,6 +125,9 @@ export class MissionService {
     };
     mission.candidatures = [...candidates, candidate];
     await this.missions.save(mission);
+    if (mission.commercant?.id) {
+      await this.notifications.notifyMissionApplication(mission.commercant.id, mission.id, Number(sub), mission.titre);
+    }
     return { ...candidate, candidat: this.publicUser(user) };
   }
 
@@ -118,19 +153,63 @@ export class MissionService {
     const candidates = mission.candidatures ?? [];
     const candidate = candidates.find((item) => item.userId === userId);
     if (!candidate) throw new NotFoundException('Candidature introuvable');
+    const previousStatus = candidate.statut;
+    const isAccepted = (value: string) => value === 'acceptee' || value === 'acceptée' || value === 'accepté';
+    if (status === 'acceptee' && candidates.some((item) => item.userId !== userId && isAccepted(item.statut))) {
+      throw new ConflictException('Vous avez déjà accepté une candidature. Refusez-la avant d’en accepter une autre.');
+    }
     candidate.statut = status;
+    if (status === 'acceptee') {
+      const merchantId = mission.commercant.id;
+      const participantRows = await this.discussionParticipants.find({
+        where: [{ utilisateurId: merchantId }, { utilisateurId: userId }],
+        relations: ['discussion'],
+      });
+      let discussion = participantRows.find((row) =>
+        participantRows.some((other) => other.discussionId === row.discussionId && other.utilisateurId !== row.utilisateurId)
+        && row.discussion?.type === DiscussionType.PRIVATE,
+      )?.discussion;
+      if (!discussion) {
+        discussion = await this.discussions.save(this.discussions.create({
+          type: DiscussionType.PRIVATE,
+          titre: mission.titre,
+          lastMessage: `Candidature acceptée pour « ${mission.titre} »`,
+          lastMessageDate: new Date(),
+        }));
+        await this.discussionParticipants.save([
+          this.discussionParticipants.create({ discussionId: discussion.id, utilisateurId: merchantId }),
+          this.discussionParticipants.create({ discussionId: discussion.id, utilisateurId: userId }),
+        ]);
+      }
+      candidate.discussionId = discussion.id;
+    }
     mission.candidatures = candidates;
     await this.missions.save(mission);
+    if (previousStatus !== status) {
+      await this.notifications.notifyMissionApplicationStatus(userId, mission.id, mission.titre, status === 'acceptee');
+    }
     return candidate;
   }
 
   private publicUser(user: Utilisateur) {
-    return { id: user.id, nom: user.nom, prenom: user.prenom, email: user.email, specialite: user.specialite, image: user.image };
+    return {
+      id: user.id,
+      nom: user.nom,
+      prenom: user.prenom,
+      email: user.email,
+      adresse: user.adresse,
+      telephone: user.contact,
+      specialite: user.specialite,
+      image: user.image,
+    };
   }
 
   async update(id: number, body: Partial<Mission>, token?: string) {
     const mission = await this.getOwnedMission(id, token);
     const { candidatures, commercant, publicationPayee: _payment, ...editableFields } = body;
+    if (editableFields.type !== undefined && editableFields.type !== mission.type) {
+      editableFields.type = await this.missionTypes.assertExists(editableFields.type);
+    }
     if (editableFields.statut === StatutMission.OUVERTE && !mission.publicationPayee) throw new ConflictException('Le paiement de 500 FCFA doit être confirmé avant la publication.');
     Object.assign(mission, editableFields);
     return this.missions.save(mission);

@@ -17,7 +17,7 @@ export class Plan {
     @Column()
     titre!: string;
 
-    @Column({ type: 'text', enum: TypePlan, default: TypePlan.STANDARD })
+    @Column({ type: 'enum', enum: TypePlan, default: TypePlan.STANDARD })
     type!: TypePlan;
 
     @Column('decimal', { precision: 10, scale: 2 })
@@ -44,7 +44,7 @@ export class Plan {
     @Column()
     dateActivation!: Date;
 
-    @Column({ type: 'datetime', nullable: true })
+    @Column({ type: 'timestamp', nullable: true })
     dateExpiration!: Date | null;
 
     @OneToOne(() => Utilisateur)

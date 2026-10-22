@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { JwtModule } from '@nestjs/jwt';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as fs from 'fs';
@@ -15,7 +14,6 @@ import { ShortService } from './short.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Short, ShortLike, ShortComment, Utilisateur, Produit]),
-    JwtModule.register({ secret: process.env.JWT_SECRET || 'orion_secret_key' }),
     // Video uploads need a separate limit from the 5 MB image upload module.
     MulterModule.register({
       storage: diskStorage({

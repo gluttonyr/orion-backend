@@ -20,12 +20,15 @@ export class Boutique {
     location?: string;
 
     @Column({ nullable: true })
+    address?: string;
+
+    @Column({ nullable: true })
     logo?: string;
 
     @Column({ type: 'boolean', default: true })
     active!: boolean;
 
-    // ajout d'une limite de 30 produits par boutique
+    // Nombre de produits actuellement associés à cette boutique.
     @Column({ type: 'int', default: 0 })
     nombreProduits!: number;
     

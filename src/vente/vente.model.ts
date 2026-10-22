@@ -44,6 +44,9 @@ export class Vente {
   @Column('simple-array')
   quantites!: number[];
 
+  @Column('simple-array', { nullable: true })
+  prix_unitaires!: number[] | null;
+
   // @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   @Column()
   date_achat!: Date;

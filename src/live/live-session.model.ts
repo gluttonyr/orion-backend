@@ -36,9 +36,9 @@ export class LiveSession {
   @Column({ type: 'text' })
   tiktokUrl!: string;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   startedAt!: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   endedAt!: Date | null;
 }
