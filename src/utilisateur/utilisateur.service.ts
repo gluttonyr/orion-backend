@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException, OnModuleInit, UnauthorizedException } from "@nestjs/common";
 import { Utilisateur } from "./utilisateur.model";
 import * as bcrypt from 'bcrypt';
 import { UtilisateurRepository } from "./utilisateur.repository";
@@ -21,12 +21,40 @@ const countryByDialCode: Record<string, string> = {
 
 
 @Injectable()
-export class UtilisateurService {
+export class UtilisateurService implements OnModuleInit {
+  private readonly logger = new Logger(UtilisateurService.name);
 
   constructor(
     private readonly repo: UtilisateurRepository,
     private readonly uploadService: UploadService,
     private readonly jwt: JwtService) {}
+
+  async onModuleInit(): Promise<void> {
+    const existingAdmin = await this.repo.findOne({ where: { role: UserRole.ADMIN } });
+    if (existingAdmin) return;
+
+    const email = (process.env.DEFAULT_ADMIN_EMAIL || 'admin@orion.com').trim().toLowerCase();
+    const password = process.env.DEFAULT_ADMIN_PASSWORD || 'Admin@123456';
+    const passwordHash = await bcrypt.hash(password, await bcrypt.genSalt());
+
+    try {
+      await this.repo.save(this.repo.create({
+        nom: 'Orion',
+        prenom: 'Admin',
+        email,
+        password: passwordHash,
+        role: UserRole.ADMIN,
+      }));
+      this.logger.warn(`Compte administrateur initial créé : ${email}`);
+    } catch (error) {
+      if ((error as { code?: string })?.code === '23505') {
+        const adminCreatedByAnotherInstance = await this.repo.findOne({ where: { role: UserRole.ADMIN } });
+        if (adminCreatedByAnotherInstance) return;
+        throw new Error(`Impossible de créer l'administrateur initial : l'adresse ${email} est déjà utilisée.`);
+      }
+      throw error;
+    }
+  }
 
   // CREATE USER
   async createUsers(user: Utilisateur & { indicatifPays?: string }) {

@@ -7,10 +7,11 @@ import { Utilisateur } from '../utilisateur/utilisateur.model';
 import { Vente } from '../vente/vente.model';
 import { PortefeuillePlateforme } from '../plateforme/portefeuille-plateforme.model';
 import { AdminGuard } from './admin.guard';
+import { AboutTeamMember } from './about-team-member.model';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SiteSettings, Utilisateur, Vente, PortefeuillePlateforme]),
+    TypeOrmModule.forFeature([SiteSettings, Utilisateur, Vente, PortefeuillePlateforme, AboutTeamMember]),
   ],
   controllers: [AdminController],
   providers: [AdminService, AdminGuard],

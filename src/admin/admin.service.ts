@@ -5,6 +5,7 @@ import { SiteSettings } from './site-settings.model';
 import { Utilisateur } from '../utilisateur/utilisateur.model';
 import { Vente } from '../vente/vente.model';
 import { PortefeuillePlateforme } from '../plateforme/portefeuille-plateforme.model';
+import { AboutTeamMember } from './about-team-member.model';
 
 @Injectable()
 export class AdminService implements OnModuleInit {
@@ -13,6 +14,7 @@ export class AdminService implements OnModuleInit {
     @InjectRepository(Utilisateur) private readonly usersRepo: Repository<Utilisateur>,
     @InjectRepository(Vente) private readonly salesRepo: Repository<Vente>,
     @InjectRepository(PortefeuillePlateforme) private readonly walletRepo: Repository<PortefeuillePlateforme>,
+    @InjectRepository(AboutTeamMember) private readonly teamRepo: Repository<AboutTeamMember>,
   ) {}
 
   async onModuleInit() {
@@ -46,6 +48,30 @@ export class AdminService implements OnModuleInit {
       carouselImages: this.decode(settings.carouselImagesJson),
       updatedAt: settings.updatedAt,
     };
+  }
+
+  getAboutTeam() {
+    return this.teamRepo.find({ order: { position: 'ASC', id: 'ASC' } });
+  }
+
+  async saveAboutTeamMember(input: { name: string; role: string; bio?: string; position?: number }, photo?: string, id?: number) {
+    const name = input.name?.trim();
+    const role = input.role?.trim();
+    if (!name || !role) throw new Error('Le nom et la fonction sont obligatoires.');
+    const member = id ? await this.teamRepo.findOneBy({ id }) : this.teamRepo.create();
+    if (!member) throw new Error('Ce profil est introuvable.');
+    member.name = name;
+    member.role = role;
+    member.bio = input.bio?.trim() ?? member.bio ?? '';
+    member.position = Number.isInteger(Number(input.position)) ? Number(input.position) : member.position ?? 0;
+    if (photo) member.photo = photo;
+    return this.teamRepo.save(member);
+  }
+
+  async deleteAboutTeamMember(id: number) {
+    const result = await this.teamRepo.delete(id);
+    if (!result.affected) throw new Error('Ce profil est introuvable.');
+    return { success: true };
   }
 
   async updateSiteSettings(

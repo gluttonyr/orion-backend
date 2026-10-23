@@ -1,5 +1,8 @@
-import { BadRequestException, Controller, Get, Put, UploadedFiles, UseGuards, UseInterceptors, Body } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { BadRequestException, Controller, Get, Put, Post, Patch, Delete, Param, UploadedFiles, UploadedFile, UseGuards, UseInterceptors, Body } from '@nestjs/common';
+import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { AdminService } from './admin.service';
 import { AdminGuard } from './admin.guard';
 import { Public } from '../auth/public.decorator';
@@ -30,6 +33,48 @@ export class AdminController {
   @Public()
   siteSettings() {
     return this.admin.getSiteSettings();
+  }
+
+  @Get('about/team')
+  @Public()
+  aboutTeam() { return this.admin.getAboutTeam(); }
+
+  @Post('admin/about/team')
+  @UseGuards(AdminGuard)
+  @UseInterceptors(FileInterceptor('photo', {
+    storage: diskStorage({
+      destination: (_req, _file, callback) => {
+        const directory = process.env.UPLOAD_PATH || './uploads';
+        if (!existsSync(directory)) mkdirSync(directory, { recursive: true });
+        callback(null, directory);
+      },
+      filename: (_req, file, callback) => callback(null, `about-${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`),
+    }),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (_req, file, callback) => callback(file.mimetype.startsWith('image/') ? null : new BadRequestException('Seules les images sont acceptées.'), file.mimetype.startsWith('image/')),
+  }))
+  async createAboutTeamMember(@Body() body: { name: string; role: string; bio?: string; position?: number }, @UploadedFile() photo?: Express.Multer.File) {
+    try { return await this.admin.saveAboutTeamMember(body, photo?.filename); }
+    catch (error) { throw new BadRequestException(error instanceof Error ? error.message : 'Impossible de créer ce profil.'); }
+  }
+
+  @Patch('admin/about/team/:id')
+  @UseGuards(AdminGuard)
+  @UseInterceptors(FileInterceptor('photo', {
+    storage: diskStorage({ destination: (_req, _file, callback) => { const directory = process.env.UPLOAD_PATH || './uploads'; if (!existsSync(directory)) mkdirSync(directory, { recursive: true }); callback(null, directory); }, filename: (_req, file, callback) => callback(null, `about-${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`) }),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (_req, file, callback) => callback(file.mimetype.startsWith('image/') ? null : new BadRequestException('Seules les images sont acceptées.'), file.mimetype.startsWith('image/')),
+  }))
+  async updateAboutTeamMember(@Param('id') id: string, @Body() body: { name: string; role: string; bio?: string; position?: number }, @UploadedFile() photo?: Express.Multer.File) {
+    try { return await this.admin.saveAboutTeamMember(body, photo?.filename, Number(id)); }
+    catch (error) { throw new BadRequestException(error instanceof Error ? error.message : 'Impossible de modifier ce profil.'); }
+  }
+
+  @Delete('admin/about/team/:id')
+  @UseGuards(AdminGuard)
+  async deleteAboutTeamMember(@Param('id') id: string) {
+    try { return await this.admin.deleteAboutTeamMember(Number(id)); }
+    catch (error) { throw new BadRequestException(error instanceof Error ? error.message : 'Impossible de supprimer ce profil.'); }
   }
 
   @Put('admin/site-settings')
