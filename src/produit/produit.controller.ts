@@ -104,6 +104,17 @@ async create(
     return this.produitService.findByOwner(Number(id));
   }
 
+  @Put(':id/likes')
+  @Public()
+  setLike(@Param('id') id: string, @Body() body: { visitorId?: string; liked?: boolean }) {
+    const productId = Number(id);
+    const visitorId = body.visitorId?.trim();
+    if (!Number.isSafeInteger(productId) || productId <= 0 || !visitorId || visitorId.length > 100 || typeof body.liked !== 'boolean') {
+      throw new BadRequestException('Informations de like invalides.');
+    }
+    return this.produitService.setProductLike(productId, visitorId, body.liked);
+  }
+
   // GET ONE
   @Get(':id')
   @Public()

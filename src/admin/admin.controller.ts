@@ -17,6 +17,12 @@ export class AdminController {
     return this.admin.getUsers();
   }
 
+  @Get('admin/dashboard-stats')
+  @UseGuards(AdminGuard)
+  dashboardStats() {
+    return this.admin.getDashboardStats();
+  }
+
   @Get('admin/orders')
   @UseGuards(AdminGuard)
   async orders() {
@@ -77,12 +83,36 @@ export class AdminController {
     catch (error) { throw new BadRequestException(error instanceof Error ? error.message : 'Impossible de supprimer ce profil.'); }
   }
 
+  @Get('admin/merchants')
+  @UseGuards(AdminGuard)
+  merchants() { return this.admin.getMerchants(); }
+
+  @Get('admin/merchants/:id/products')
+  @UseGuards(AdminGuard)
+  async merchantProducts(@Param('id') id: string) {
+    try { return await this.admin.getMerchantProducts(Number(id)); }
+    catch (error) { throw new BadRequestException(error instanceof Error ? error.message : 'Impossible de charger les produits du marchand.'); }
+  }
+
+  @Get('admin/carousel-products')
+  @UseGuards(AdminGuard)
+  carouselProducts() { return this.admin.getCarouselProducts(); }
+
   @Put('admin/site-settings')
   @UseGuards(AdminGuard)
   @UseInterceptors(FileFieldsInterceptor([
     { name: 'heroImagesFiles', maxCount: 3 },
-    { name: 'carouselImagesFiles', maxCount: 10 },
   ], {
+    storage: diskStorage({
+      destination: (_request, _file, callback) => {
+        const directory = process.env.UPLOAD_PATH || './uploads';
+        if (!existsSync(directory)) mkdirSync(directory, { recursive: true });
+        callback(null, directory);
+      },
+      filename: (_request, file, callback) => {
+        callback(null, `site-${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`);
+      },
+    }),
     limits: { fileSize: 8 * 1024 * 1024 },
     fileFilter: (_request, file, callback) => {
       const isImage = file.mimetype.startsWith('image/');
@@ -90,8 +120,8 @@ export class AdminController {
     },
   }))
   async updateSiteSettings(
-    @Body() body: { heroImages?: string; carouselImages?: string },
-    @UploadedFiles() files: { heroImagesFiles?: Express.Multer.File[]; carouselImagesFiles?: Express.Multer.File[] },
+    @Body() body: { heroImages?: string; carouselProductIds?: string },
+    @UploadedFiles() files: { heroImagesFiles?: Express.Multer.File[] },
   ) {
     try { return await this.admin.updateSiteSettings(body, files ?? {}); }
     catch (error) { throw new BadRequestException(error instanceof Error ? error.message : 'Impossible d’enregistrer les réglages du site.'); }

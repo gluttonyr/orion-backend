@@ -1,11 +1,18 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { ProduitRepository } from './produit.repository';
 import { Produit } from './produit.model';
+import { ProduitLike } from './produit-like.model';
 import { PlanService } from '../plan/plan.service';
 
 @Injectable()
 export class ProduitService {
-  constructor(private readonly repo: ProduitRepository, private readonly plans: PlanService) {}
+  constructor(
+    private readonly repo: ProduitRepository,
+    private readonly plans: PlanService,
+    @InjectRepository(ProduitLike) private readonly likes: Repository<ProduitLike>,
+  ) {}
 
   // CREATE
   async create(data: Partial<Produit>) {
@@ -29,7 +36,35 @@ export class ProduitService {
   }
 
   async findByOwner(proprietaireId: number) {
-    return this.repo.find({ where: { proprietaireId }, relations: { categorie: true }, order: { id: 'DESC' } });
+    const products = await this.repo.find({ where: { proprietaireId }, relations: { categorie: true }, order: { id: 'DESC' } });
+    const counts = await this.getLikeCounts(products.map(({ id }) => id));
+    return products.map((product) => ({ ...product, likesCount: counts.get(product.id) ?? 0 }));
+  }
+
+  async setProductLike(productId: number, visitorId: string, liked: boolean) {
+    await this.findPublishedOne(productId);
+    if (liked) {
+      await this.likes.createQueryBuilder()
+        .insert()
+        .into(ProduitLike)
+        .values({ produitId: productId, visitorId })
+        .orIgnore()
+        .execute();
+    } else {
+      await this.likes.delete({ produitId: productId, visitorId });
+    }
+    return { count: await this.likes.count({ where: { produitId: productId } }), liked };
+  }
+
+  private async getLikeCounts(productIds: number[]): Promise<Map<number, number>> {
+    if (!productIds.length) return new Map();
+    const rows = await this.likes.createQueryBuilder('like')
+      .select('like.produitId', 'produitId')
+      .addSelect('COUNT(*)', 'count')
+      .where('like.produitId IN (:...productIds)', { productIds })
+      .groupBy('like.produitId')
+      .getRawMany<{ produitId: string; count: string }>();
+    return new Map(rows.map((row) => [Number(row.produitId), Number(row.count)]));
   }
 
   // GET ONE
