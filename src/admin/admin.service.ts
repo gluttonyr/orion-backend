@@ -10,6 +10,7 @@ import { PortefeuillePlateforme } from '../plateforme/portefeuille-plateforme.mo
 import { AboutTeamMember } from './about-team-member.model';
 import { Produit } from '../produit/produit.model';
 import { ProduitLike } from '../produit/produit-like.model';
+import { getUploadRoot } from '../upload/upload-root';
 
 @Injectable()
 export class AdminService implements OnModuleInit {
@@ -196,7 +197,7 @@ export class AdminService implements OnModuleInit {
     await this.settingsRepo.save(settings);
     const retainedImages = new Set(heroImages);
     const removedImages = new Set([...previousHeroImages, ...previousCarouselValues.filter((image) => image.startsWith('site-'))].filter((image) => !retainedImages.has(image)));
-    const uploadDirectory = process.env.UPLOAD_PATH || './uploads';
+    const uploadDirectory = getUploadRoot();
     for (const image of removedImages) {
       if (!image.startsWith('site-') || basename(image) !== image) continue;
       const filePath = join(uploadDirectory, image);

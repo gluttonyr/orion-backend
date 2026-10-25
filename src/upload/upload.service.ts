@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+import { getUploadRoot } from './upload-root';
 
 @Injectable()
 export class UploadService {
 
   public getBaseUploadPath(): string {
-    const uploadPath = process.env.UPLOAD_PATH || './uploads';
+    const uploadPath = getUploadRoot();
 
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Headers, Param, Patch, Post, Put, UnauthorizedException, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Headers, Param, Patch, Post, Put, Query, UnauthorizedException, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { ProduitService } from './produit.service';
 import { Produit } from './produit.model';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
@@ -102,6 +102,14 @@ async create(
       throw new UnauthorizedException('Accès aux produits du compte refusé.');
     }
     return this.produitService.findByOwner(Number(id));
+  }
+
+  @Get('search')
+  @Public()
+  search(@Query('q') query = '', @Query('limit') limit = '5') {
+    const value = query.trim().slice(0, 100);
+    const requestedLimit = Number(limit);
+    return this.produitService.searchPublished(value, Number.isFinite(requestedLimit) ? requestedLimit : 5);
   }
 
   @Put(':id/likes')

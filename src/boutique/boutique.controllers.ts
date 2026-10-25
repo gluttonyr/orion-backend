@@ -4,6 +4,7 @@ import type { Response } from 'express';
 import { BoutiqueService } from './boutique.service';
 import { Boutique } from './boutique.model';
 import { UploadService } from '../upload/upload.service';
+import { getUploadRoot } from '../upload/upload-root';
 import { Public } from '../auth/public.decorator';
 import { Roles } from '../auth/roles.decorator';
 
@@ -55,7 +56,7 @@ export class BoutiqueController {
   @Public()
   async getLogo(@Param('filename') filename: string, @Res() res: Response) {
     // Sends file from the uploads directory
-    return res.sendFile(filename, { root: 'uploads' });}
+    return res.sendFile(filename, { root: getUploadRoot() });}
 
   // GET ALL
   @Get()

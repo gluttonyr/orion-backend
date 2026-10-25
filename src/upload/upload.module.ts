@@ -5,8 +5,9 @@ import { extname } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { UploadService } from './upload.service';
 import { UploadController } from './upload.controller';
+import { getUploadRoot } from './upload-root';
 
-const uploadDir = './uploads';
+const uploadDir = getUploadRoot();
 if (!existsSync(uploadDir)) {
   mkdirSync(uploadDir, { recursive: true });
 }

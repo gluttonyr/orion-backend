@@ -14,6 +14,7 @@ import { Short } from './short.model';
 import { ShortComment, ShortLike } from './short-social.model';
 import { Utilisateur } from '../utilisateur/utilisateur.model';
 import { Produit } from '../produit/produit.model';
+import { getUploadRoot } from '../upload/upload-root';
 
 const allowedVideoTypes = new Set(['video/mp4', 'video/quicktime', 'video/webm']);
 const allowedCoverTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -99,7 +100,7 @@ export class ShortService {
     }
 
     const relative = (file?: Express.Multer.File) =>
-      file ? path.relative(path.resolve(process.env.UPLOAD_PATH || './uploads'), file.path).replace(/\\/g, '/') : null;
+      file ? path.relative(getUploadRoot(), file.path).replace(/\\/g, '/') : null;
 
     try {
       const short = this.shorts.create({
@@ -344,7 +345,7 @@ export class ShortService {
   }
 
   private absoluteUploadPath(relativePath: string) {
-    const root = path.resolve(process.env.UPLOAD_PATH || './uploads');
+    const root = getUploadRoot();
     const resolved = path.resolve(root, relativePath);
     if (!resolved.startsWith(`${root}${path.sep}`)) throw new NotFoundException('Fichier introuvable');
     return resolved;

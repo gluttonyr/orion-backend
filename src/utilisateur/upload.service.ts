@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+import { getUploadRoot } from '../upload/upload-root';
 
 @Injectable()
 export class UploadService {
 
-  private basePath = process.env.UPLOAD_PATH || './uploads';
+  private basePath = getUploadRoot();
 
   saveProfileImage(file: Express.Multer.File): string {
     const profileDir = path.join(this.basePath, 'profile');

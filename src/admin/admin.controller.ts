@@ -6,6 +6,7 @@ import { existsSync, mkdirSync } from 'fs';
 import { AdminService } from './admin.service';
 import { AdminGuard } from './admin.guard';
 import { Public } from '../auth/public.decorator';
+import { getUploadRoot } from '../upload/upload-root';
 
 @Controller()
 export class AdminController {
@@ -50,7 +51,7 @@ export class AdminController {
   @UseInterceptors(FileInterceptor('photo', {
     storage: diskStorage({
       destination: (_req, _file, callback) => {
-        const directory = process.env.UPLOAD_PATH || './uploads';
+        const directory = getUploadRoot();
         if (!existsSync(directory)) mkdirSync(directory, { recursive: true });
         callback(null, directory);
       },
@@ -67,7 +68,7 @@ export class AdminController {
   @Patch('admin/about/team/:id')
   @UseGuards(AdminGuard)
   @UseInterceptors(FileInterceptor('photo', {
-    storage: diskStorage({ destination: (_req, _file, callback) => { const directory = process.env.UPLOAD_PATH || './uploads'; if (!existsSync(directory)) mkdirSync(directory, { recursive: true }); callback(null, directory); }, filename: (_req, file, callback) => callback(null, `about-${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`) }),
+    storage: diskStorage({ destination: (_req, _file, callback) => { const directory = getUploadRoot(); if (!existsSync(directory)) mkdirSync(directory, { recursive: true }); callback(null, directory); }, filename: (_req, file, callback) => callback(null, `about-${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`) }),
     limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (_req, file, callback) => callback(file.mimetype.startsWith('image/') ? null : new BadRequestException('Seules les images sont acceptées.'), file.mimetype.startsWith('image/')),
   }))
@@ -105,7 +106,7 @@ export class AdminController {
   ], {
     storage: diskStorage({
       destination: (_request, _file, callback) => {
-        const directory = process.env.UPLOAD_PATH || './uploads';
+        const directory = getUploadRoot();
         if (!existsSync(directory)) mkdirSync(directory, { recursive: true });
         callback(null, directory);
       },

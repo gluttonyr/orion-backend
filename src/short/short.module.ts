@@ -9,6 +9,7 @@ import { ShortComment, ShortLike } from './short-social.model';
 import { Utilisateur } from '../utilisateur/utilisateur.model';
 import { Produit } from '../produit/produit.model';
 import { ShortController } from './short.controller';
+import { getUploadRoot } from '../upload/upload-root';
 import { ShortService } from './short.service';
 
 @Module({
@@ -18,7 +19,7 @@ import { ShortService } from './short.service';
     MulterModule.register({
       storage: diskStorage({
         destination: (_req, _file, callback) => {
-          const uploadRoot = path.resolve(process.env.UPLOAD_PATH || './uploads');
+          const uploadRoot = getUploadRoot();
           const shortDir = path.join(uploadRoot, 'shorts');
           fs.mkdirSync(shortDir, { recursive: true });
           callback(null, shortDir);
