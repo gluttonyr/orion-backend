@@ -19,7 +19,8 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build --chown=node:node /app/dist ./dist
 RUN mkdir -p /app/uploads && chown -R node:node /app
 
-USER node
+ENV UPLOAD_ROOT=/app/uploads
 EXPOSE 3000
 
-CMD ["node", "dist/main.js"]
+# Starts as root only to hand the (possibly root-owned) mounted uploads volume to `node`, then drops privileges.
+CMD ["sh", "-c", "mkdir -p \"$UPLOAD_ROOT\" && chown -R node:node \"$UPLOAD_ROOT\" && exec setpriv --reuid=node --regid=node --init-groups node dist/main.js"]
