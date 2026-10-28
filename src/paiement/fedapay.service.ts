@@ -30,6 +30,22 @@ export interface FedaPayCheckoutDto {
   quantites: number[];
   liveSessionId?: number;
   platform?: 'web' | 'mobile';
+  /** Google Maps link chosen at checkout, same format as a store location. Falls back to the profile address. */
+  adresseLivraison?: string;
+}
+
+const MAPS_HOSTS = new Set(['maps.app.goo.gl', 'goo.gl', 'www.google.com', 'google.com', 'maps.google.com']);
+
+export function parseDeliveryLocation(value: unknown): string | null {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string' || value.trim().length > 500) throw new BadRequestException('L’adresse de livraison est invalide');
+  try {
+    const url = new URL(value.trim());
+    const host = url.hostname.toLowerCase();
+    const isMaps = url.protocol === 'https:' && MAPS_HOSTS.has(host) && (host.endsWith('goo.gl') || host === 'maps.google.com' || url.pathname.startsWith('/maps'));
+    if (isMaps) return url.toString();
+  } catch { /* handled below */ }
+  throw new BadRequestException('L’adresse de livraison doit être un lien Google Maps ou votre position actuelle');
 }
 
 type FedaPayResource = Record<string, unknown>;
@@ -127,10 +143,13 @@ export class FedaPayService {
     if (input.platform !== undefined && input.platform !== 'web' && input.platform !== 'mobile') {
       throw new BadRequestException('Le canal de paiement indiqué est invalide');
     }
+    const deliveryLocation = parseDeliveryLocation(input.adresseLivraison);
     const customer = await this.utilisateurService.findOne(utilisateurId);
-    if (!customer.prenom?.trim() || !customer.nom?.trim() || !customer.email?.trim() || !customer.adresse?.trim()) {
-      throw new BadRequestException('Complète ton prénom, ton nom, ton e-mail et ton adresse dans ton profil avant de commander');
+    if (!customer.prenom?.trim() || !customer.nom?.trim() || !customer.email?.trim()) {
+      throw new BadRequestException('Complète ton prénom, ton nom et ton e-mail dans ton profil avant de commander');
     }
+    const adresseLivraison = deliveryLocation ?? customer.adresse?.trim();
+    if (!adresseLivraison) throw new BadRequestException('Indique ton adresse de livraison avant de commander');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email.trim())) {
       throw new BadRequestException('L’adresse e-mail enregistrée dans le profil est invalide');
     }
@@ -181,7 +200,7 @@ export class FedaPayService {
       clientNom: customer.nom.trim(),
       clientEmail: customer.email.trim().toLowerCase(),
       clientTelephone: customer.contact?.trim() || null,
-      adresseLivraison: customer.adresse.trim(),
+      adresseLivraison,
       produits: products,
       quantites: input.quantites.map(Number),
       prix_unitaires: products.map(getProductSellingPrice),

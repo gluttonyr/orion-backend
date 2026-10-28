@@ -70,9 +70,9 @@ export class BoutiqueController {
   }
 
   @Post('resolve-location')
-  @Roles('COMMERCANT')
-  async resolveLocation(@Body() body: { url?: string }, @Headers('authorization') authorization: string) {
-    return this.boutiqueService.resolveMapsLocation(body?.url ?? '', authorization?.replace(/^Bearer\s+/i, ''));
+  @Roles('COMMERCANT', 'UTILISATEUR', 'ADMIN')
+  async resolveLocation(@Body() body: { url?: string }) {
+    return this.boutiqueService.resolveMapsLocation(body?.url ?? '');
   }
 
   // GET ONE

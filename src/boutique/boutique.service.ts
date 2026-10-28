@@ -49,8 +49,8 @@ export class BoutiqueService {
     return boutique;
   }
 
-  async resolveMapsLocation(rawUrl: string, token?: string): Promise<{ label: string | null }> {
-    await this.getOwnerId(token);
+  // Authentication is enforced by the global JWT guard; clients also use it for delivery addresses at checkout.
+  async resolveMapsLocation(rawUrl: string): Promise<{ label: string | null }> {
     let current: URL;
     try { current = new URL(rawUrl); } catch { throw new BadRequestException('Lien Google Maps invalide.'); }
     const allowedHosts = new Set(['maps.app.goo.gl', 'goo.gl', 'www.google.com', 'google.com', 'maps.google.com']);
