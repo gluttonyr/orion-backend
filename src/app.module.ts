@@ -24,6 +24,7 @@ import { PlateformeModule } from './plateforme/plateforme.module';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { BoutiqueCategorieModule } from './boutique-categorie/boutique-categorie.module';
+import { AideModule } from './aide/aide.module';
 
 const bootstrapDatabase = process.env.DB_BOOTSTRAP === 'true';
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -48,6 +49,7 @@ const isDevelopment = process.env.NODE_ENV === 'development';
     UtilisateurModule,
     CategorieModule,
     BoutiqueCategorieModule,
+    AideModule,
     VenteModule,
     ProduitModule,
     DemandeModule,
