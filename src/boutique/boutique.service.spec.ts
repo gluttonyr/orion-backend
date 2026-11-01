@@ -23,3 +23,30 @@ describe('BoutiqueService.remove', () => {
     expect(boutiqueRepository.deleteBoutique).not.toHaveBeenCalled();
   });
 });
+
+describe('BoutiqueService.reportStore', () => {
+  it('accepts a report without a reason', async () => {
+    const boutiqueRepository = { findBoutiqueById: jest.fn().mockResolvedValue({ id: 12, active: true }) };
+    const signalements = {
+      create: jest.fn((report) => report),
+      save: jest.fn().mockImplementation(async (report) => ({ id: 24, ...report })),
+    };
+    const service = new BoutiqueService(
+      boutiqueRepository as any,
+      { verifyAsync: jest.fn().mockResolvedValue({ sub: 7 }) } as any,
+      {} as any,
+      {} as any,
+      signalements as any,
+    );
+
+    const result = await service.reportStore(12, '', 'valid-token');
+
+    expect(result).toMatchObject({ ok: true, boutiqueId: 12, motif: 'Aucun détail fourni', reported: true });
+    expect(signalements.create).toHaveBeenCalledWith(expect.objectContaining({
+      boutiqueId: 12,
+      produitId: null,
+      utilisateurId: 7,
+      motif: 'Aucun détail fourni',
+    }));
+  });
+});

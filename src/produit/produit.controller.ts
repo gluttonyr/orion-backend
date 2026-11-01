@@ -123,6 +123,42 @@ async create(
     return this.produitService.setProductLike(productId, visitorId, body.liked);
   }
 
+  @Get(':id/avis')
+  @Public()
+  getProductReviews(@Param('id') id: string) {
+    return this.produitService.getProductReviews(Number(id));
+  }
+
+  @Post(':id/avis')
+  @Roles('UTILISATEUR', 'COMMERCANT')
+  async saveProductReview(
+    @Param('id') id: string,
+    @Body() body: { note?: number; commentaire?: string },
+    @Headers('authorization') authorization?: string,
+  ) {
+    let payload: { sub?: number };
+    try { payload = await this.jwt.verifyAsync(authorization?.replace(/^Bearer\s+/i, '') ?? ''); }
+    catch { throw new UnauthorizedException('Session invalide ou expirée.'); }
+    const userId = Number(payload.sub);
+    if (!Number.isSafeInteger(userId) || userId <= 0) throw new UnauthorizedException('Session invalide ou expirée.');
+    return this.produitService.saveProductReview(Number(id), userId, Number(body?.note), body?.commentaire);
+  }
+
+  @Post(':id/signaler')
+  @Roles('UTILISATEUR', 'COMMERCANT', 'ADMIN')
+  async reportProduct(
+    @Param('id') id: string,
+    @Body() body: { motif?: string },
+    @Headers('authorization') authorization?: string,
+  ) {
+    let payload: { sub?: number };
+    try { payload = await this.jwt.verifyAsync(authorization?.replace(/^Bearer\s+/i, '') ?? ''); }
+    catch { throw new UnauthorizedException('Session invalide ou expirée.'); }
+    const userId = Number(payload.sub);
+    if (!Number.isSafeInteger(userId) || userId <= 0) throw new UnauthorizedException('Session invalide ou expirée.');
+    return this.produitService.reportProduct(Number(id), userId, body?.motif ?? '');
+  }
+
   // GET ONE
   @Get(':id')
   @Public()

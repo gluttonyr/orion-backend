@@ -7,6 +7,8 @@ import { ProduitLike } from './produit-like.model';
 import { PlanService } from '../plan/plan.service';
 import { Utilisateur } from '../utilisateur/utilisateur.model';
 import { Boutique } from '../boutique/boutique.model';
+import { BoutiqueSignalement } from '../boutique/boutique-signalement.model';
+import { ProduitAvis } from './produit-avis.model';
 
 @Injectable()
 export class ProduitService {
@@ -16,6 +18,8 @@ export class ProduitService {
     @InjectRepository(ProduitLike) private readonly likes: Repository<ProduitLike>,
     @InjectRepository(Utilisateur) private readonly users: Repository<Utilisateur>,
     @InjectRepository(Boutique) private readonly stores: Repository<Boutique>,
+    @InjectRepository(BoutiqueSignalement) private readonly signalements: Repository<BoutiqueSignalement>,
+    @InjectRepository(ProduitAvis) private readonly avis: Repository<ProduitAvis>,
   ) {}
 
   // CREATE
@@ -120,6 +124,65 @@ export class ProduitService {
     const store = produit.proprietaireId ? await this.stores.findOne({ where: { proprietaireId: produit.proprietaireId }, select: { id: true, nom: true, proprietaireId: true, active: true } }) : null;
     if (store?.active === false) throw new NotFoundException(`Produit avec id ${id} introuvable`);
     return { ...produit, boutiqueId: store?.id ?? null, boutiqueNom: store?.nom ?? null };
+  }
+
+  async reportProduct(id: number, utilisateurId: number, motif: string) {
+    const product = await this.findPublishedOne(id);
+    if (!product.proprietaireId) throw new NotFoundException('Produit introuvable.');
+    const store = await this.stores.findOne({ where: { proprietaireId: product.proprietaireId }, select: { id: true } });
+    if (!store) throw new NotFoundException('Boutique du produit introuvable.');
+    const normalizedMotif = motif?.trim() || 'Aucun détail fourni';
+    const report = await this.signalements.save(this.signalements.create({
+      boutiqueId: store.id,
+      produitId: product.id,
+      utilisateurId,
+      motif: normalizedMotif,
+      resolu: false,
+    }));
+    return { ok: true, boutiqueId: store.id, produitId: product.id, motif: normalizedMotif, reported: true, reportId: report.id };
+  }
+
+  async getProductReviews(id: number) {
+    await this.findPublishedOne(id);
+    const reviews = await this.avis.find({ where: { produitId: id }, order: { dateCreation: 'DESC' } });
+    const userIds = [...new Set(reviews.map((review) => review.utilisateurId))];
+    const users = userIds.length ? await this.users.find({ where: { id: In(userIds) }, select: { id: true, prenom: true, nom: true } }) : [];
+    const usersById = new Map(users.map((user) => [user.id, user]));
+    const items = reviews.map((review) => {
+      const user = usersById.get(review.utilisateurId);
+      return {
+        id: review.id,
+        note: review.note,
+        commentaire: review.commentaire,
+        dateCreation: review.dateCreation,
+        auteur: [user?.prenom, user?.nom].filter(Boolean).join(' ') || 'Client Orion',
+      };
+    });
+    const count = items.length;
+    return {
+      moyenne: count ? Math.round(items.reduce((sum, review) => sum + review.note, 0) / count * 10) / 10 : 0,
+      nombre: count,
+      avis: items,
+    };
+  }
+
+  async saveProductReview(id: number, utilisateurId: number, note: number, commentaire?: string) {
+    await this.findPublishedOne(id);
+    const normalizedNote = Number(note);
+    if (!Number.isInteger(normalizedNote) || normalizedNote < 1 || normalizedNote > 5) {
+      throw new BadRequestException('La note doit être comprise entre 1 et 5 étoiles.');
+    }
+    const normalizedComment = commentaire?.trim() || null;
+    if (normalizedComment && normalizedComment.length > 2000) {
+      throw new BadRequestException('Le commentaire ne peut pas dépasser 2 000 caractères.');
+    }
+    await this.avis.upsert({
+      produitId: id,
+      utilisateurId,
+      note: normalizedNote,
+      commentaire: normalizedComment,
+    }, ['produitId', 'utilisateurId']);
+    return { ok: true, ...(await this.getProductReviews(id)) };
   }
 
   async findByOwner(proprietaireId: number) {

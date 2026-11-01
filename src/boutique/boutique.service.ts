@@ -67,13 +67,11 @@ export class BoutiqueService {
 
   async reportStore(boutiqueId: number, motif: string, token?: string) {
     const boutique = await this.findOne(boutiqueId);
-    const normalizedMotif = motif?.trim() ?? '';
-    if (!normalizedMotif) {
-      throw new BadRequestException('Le motif du signalement est obligatoire.');
-    }
+    const normalizedMotif = motif?.trim() || 'Aucun détail fourni';
     const userId = token ? await this.getUserIdFromToken(token) : null;
     const report = this.signalements.create({
       boutiqueId: boutique.id,
+      produitId: null,
       utilisateurId: userId,
       motif: normalizedMotif,
       resolu: false,
@@ -85,7 +83,7 @@ export class BoutiqueService {
   async getReports() {
     return this.signalements.find({
       order: { dateCreation: 'DESC' },
-      relations: ['boutique'],
+      relations: ['boutique', 'produit'],
     });
   }
 

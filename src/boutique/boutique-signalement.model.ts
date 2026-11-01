@@ -1,5 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Boutique } from './boutique.model';
+import { Produit } from '../produit/produit.model';
 
 @Entity()
 export class BoutiqueSignalement {
@@ -12,6 +13,13 @@ export class BoutiqueSignalement {
   @ManyToOne(() => Boutique, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'boutiqueId' })
   boutique!: Boutique;
+
+  @Column({ type: 'int', nullable: true })
+  produitId!: number | null;
+
+  @ManyToOne(() => Produit, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'produitId' })
+  produit?: Produit | null;
 
   @Column({ type: 'int', nullable: true })
   utilisateurId!: number | null;
