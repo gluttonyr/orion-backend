@@ -187,25 +187,33 @@ export class VenteService {
     const remise = await this.remises.findOne({ where: { id: remiseId, commercantId: merchantId } });
     if (!remise) throw new NotFoundException('Commande vendeur introuvable.');
     if (remise.statut !== 'bloquee') throw new BadRequestException('Le QR est disponible uniquement pour une commande payée et non remise.');
+    const sale = await this.repo.findOne({ where: { id: remise.venteId } });
+    if (!sale) throw new NotFoundException('Commande introuvable.');
     const token = randomBytes(32).toString('base64url');
-    remise.qrTokenHash = createHash('sha256').update(token).digest('hex');
+    const signedPayload = `${sale.reference}:${token}`;
+    const signature = createHash('sha256').update(signedPayload).digest('hex');
+    remise.qrTokenHash = signature;
     await this.remises.save(remise);
-    const qrContent = `ORION-HANDOVER:${token}`;
+    const qrContent = `ORION-HANDOVER:${sale.reference}:${token}:${signature}`;
     return { content: qrContent, qrDataUrl: await QRCode.toDataURL(qrContent, { errorCorrectionLevel: 'M', margin: 2, width: 320 }), remiseId: remise.id, venteId: remise.venteId, montant: remise.montant };
   }
 
   async confirmHandover(clientId: number, content: string, expectedVenteId?: number) {
-    const token = content?.trim().replace(/^ORION-HANDOVER:/, '');
-    if (!token || token.length < 32 || token.length > 128) throw new BadRequestException('QR de remise invalide.');
-    const hash = createHash('sha256').update(token).digest('hex');
-    const remise = await this.remises.findOne({ where: { qrTokenHash: hash } });
+    const clean = content?.trim();
+    if (!clean || !clean.startsWith('ORION-HANDOVER:')) throw new BadRequestException('QR de remise invalide.');
+    const [, reference, token, signature] = clean.split(':');
+    if (!reference || !token || !signature || token.length < 32 || token.length > 128) throw new BadRequestException('QR de remise invalide.');
+    const expectedHash = createHash('sha256').update(`${reference}:${token}`).digest('hex');
+    if (expectedHash !== signature) throw new BadRequestException('Signature du QR invalide.');
+    const remise = await this.remises.findOne({ where: { qrTokenHash: expectedHash } });
     if (!remise) throw new NotFoundException('QR inconnu ou déjà utilisé.');
     const result = await this.dataSource.transaction(async (manager) => {
       const sale = await manager.findOne(Vente, { where: { id: remise.venteId } });
       if (!sale || sale.utilisateurId !== clientId) throw new ForbiddenException('Cette remise ne correspond pas à votre compte client.');
       if (expectedVenteId && sale.id !== expectedVenteId) throw new BadRequestException('Ce QR concerne une autre commande.');
+      if (sale.reference !== reference) throw new BadRequestException('Le QR ne correspond pas à la référence de cette commande.');
       if (sale.statut !== 'payee') throw new BadRequestException('Cette commande n’est pas confirmée comme payée.');
-      const result = await manager.update(VenteRemise, { id: remise.id, statut: 'bloquee', qrTokenHash: hash }, { statut: 'liberee', qrTokenHash: null, dateRemise: new Date() });
+      const result = await manager.update(VenteRemise, { id: remise.id, statut: 'bloquee', qrTokenHash: expectedHash }, { statut: 'liberee', qrTokenHash: null, dateRemise: new Date() });
       if (!result.affected) throw new BadRequestException('Ce QR a déjà été utilisé ou renouvelé.');
       return { ok: true, remiseId: remise.id, venteId: remise.venteId, montant: remise.montant, statut: 'liberee' };
     });

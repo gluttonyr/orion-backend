@@ -1,13 +1,22 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { BoutiqueRepository } from './boutique.repository';
 import { Boutique } from './boutique.model';
+import { BoutiqueSignalement } from './boutique-signalement.model';
 import { JwtService } from '@nestjs/jwt';
 import { PlanService } from '../plan/plan.service';
 import { BoutiqueCategorieService } from '../boutique-categorie/boutique-categorie.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class BoutiqueService {
-  constructor(private readonly boutiqueRepository: BoutiqueRepository, private readonly jwt: JwtService, private readonly plans: PlanService, private readonly categories: BoutiqueCategorieService) {}
+  constructor(
+    private readonly boutiqueRepository: BoutiqueRepository,
+    private readonly jwt: JwtService,
+    private readonly plans: PlanService,
+    private readonly categories: BoutiqueCategorieService,
+    @InjectRepository(BoutiqueSignalement) private readonly signalements: Repository<BoutiqueSignalement>,
+  ) {}
 
   private async getOwnerId(token?: string): Promise<number> {
     if (!token) throw new UnauthorizedException('Authentification requise');
@@ -38,6 +47,10 @@ export class BoutiqueService {
   }
 
   async findAll() {
+    return (await this.boutiqueRepository.findAllBoutiques()).filter((boutique) => boutique.active !== false);
+  }
+
+  async findAllForAdmin() {
     return this.boutiqueRepository.findAllBoutiques();
   }
 
@@ -46,7 +59,50 @@ export class BoutiqueService {
     if (!boutique) {
       throw new NotFoundException('Boutique non trouvée');
     }
+    if (boutique.active === false) {
+      throw new NotFoundException('Cette boutique n’est plus visible sur le site.');
+    }
     return boutique;
+  }
+
+  async reportStore(boutiqueId: number, motif: string, token?: string) {
+    const boutique = await this.findOne(boutiqueId);
+    const normalizedMotif = motif?.trim() ?? '';
+    if (!normalizedMotif) {
+      throw new BadRequestException('Le motif du signalement est obligatoire.');
+    }
+    const userId = token ? await this.getUserIdFromToken(token) : null;
+    const report = this.signalements.create({
+      boutiqueId: boutique.id,
+      utilisateurId: userId,
+      motif: normalizedMotif,
+      resolu: false,
+    });
+    await this.signalements.save(report);
+    return { ok: true, boutiqueId: boutique.id, motif: normalizedMotif, reported: true };
+  }
+
+  async getReports() {
+    return this.signalements.find({
+      order: { dateCreation: 'DESC' },
+      relations: ['boutique'],
+    });
+  }
+
+  async setStoreActive(id: number, active: boolean) {
+    const boutique = await this.boutiqueRepository.findBoutiqueById(id);
+    if (!boutique) throw new NotFoundException('Boutique non trouvée.');
+    return this.boutiqueRepository.updateBoutique(id, { active });
+  }
+
+  private async getUserIdFromToken(token?: string): Promise<number | null> {
+    if (!token) return null;
+    try {
+      const payload = await this.jwt.verifyAsync<{ sub?: number; role?: string }>(token);
+      return payload.sub ? Number(payload.sub) : null;
+    } catch {
+      return null;
+    }
   }
 
   // Authentication is enforced by the global JWT guard; clients also use it for delivery addresses at checkout.
@@ -114,8 +170,9 @@ export class BoutiqueService {
 
   async remove(id: number, token?: string) {
     const ownerId = await this.getOwnerId(token);
-    const boutique = await this.findOne(id);
+    const boutique = await this.boutiqueRepository.findBoutiqueById(id);
+    if (!boutique) throw new NotFoundException('Boutique non trouvée.');
     if (boutique.proprietaireId !== ownerId) throw new ForbiddenException('Tu ne peux supprimer que ta propre boutique.');
-    return this.boutiqueRepository.deleteBoutique(boutique.id);
+    return this.boutiqueRepository.updateBoutique(boutique.id, { active: false });
   }
 }

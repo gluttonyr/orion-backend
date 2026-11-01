@@ -39,8 +39,6 @@ export class BoutiqueRepository extends Repository<Boutique> {
     return this.findBoutiqueById(id);
   }
 
-  async deleteBoutique(id: number) { return this.delete(id);}
-
   // Vérifie la limite du forfait Standard pour les produits associés à la boutique.
   private async checkBoutiqueProductLimit(boutiqueId: number) {
     const boutique = await this.findBoutiqueById(boutiqueId);

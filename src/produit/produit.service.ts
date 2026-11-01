@@ -29,8 +29,8 @@ export class ProduitService {
 
   // GET ALL
   async findAll() {
-    const products = (await this.repo.find({ relations: { categorie: true }, order: { id: 'DESC' } }))
-      .filter((product) => product.statut !== 'Brouillon');
+    const products = await this.excludeProductsFromInactiveStores((await this.repo.find({ relations: { categorie: true }, order: { id: 'DESC' } }))
+      .filter((product) => product.statut !== 'Brouillon'));
     const ownerIds = [...new Set(products.map((product) => product.proprietaireId).filter((id): id is number => Number.isInteger(id)))];
     const owners = ownerIds.length ? await this.users.find({ where: { id: In(ownerIds) }, select: { id: true, pays: true, localisation: true } }) : [];
     const ownerById = new Map(owners.map((owner) => [owner.id, owner]));
@@ -51,7 +51,7 @@ export class ProduitService {
       .leftJoinAndSelect('product.categorie', 'category')
       .where('product.statut <> :draft', { draft: 'Brouillon' })
       .getMany();
-    return products
+    return (await this.excludeProductsFromInactiveStores(products))
       .map((product) => ({ product, score: this.scoreProductSearch(product, normalizedQuery) }))
       .filter(({ score }) => score >= 0.28)
       .sort((a, b) => b.score - a.score || a.product.id - b.product.id)
@@ -106,10 +106,19 @@ export class ProduitService {
     return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('fr-FR').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
   }
 
+  private async excludeProductsFromInactiveStores<T extends Pick<Produit, 'proprietaireId'>>(products: T[]): Promise<T[]> {
+    const ownerIds = [...new Set(products.map((product) => product.proprietaireId).filter((id): id is number => Number.isInteger(id)))];
+    if (!ownerIds.length) return products;
+    const inactiveStores = await this.stores.find({ where: { proprietaireId: In(ownerIds), active: false }, select: { proprietaireId: true } });
+    const inactiveOwnerIds = new Set(inactiveStores.map((store) => store.proprietaireId));
+    return products.filter((product) => !product.proprietaireId || !inactiveOwnerIds.has(product.proprietaireId));
+  }
+
   async findPublishedOne(id: number) {
     const produit = await this.findOne(id);
     if (produit.statut === 'Brouillon') throw new NotFoundException(`Produit avec id ${id} introuvable`);
-    const store = produit.proprietaireId ? await this.stores.findOne({ where: { proprietaireId: produit.proprietaireId }, select: { id: true, nom: true, proprietaireId: true } }) : null;
+    const store = produit.proprietaireId ? await this.stores.findOne({ where: { proprietaireId: produit.proprietaireId }, select: { id: true, nom: true, proprietaireId: true, active: true } }) : null;
+    if (store?.active === false) throw new NotFoundException(`Produit avec id ${id} introuvable`);
     return { ...produit, boutiqueId: store?.id ?? null, boutiqueNom: store?.nom ?? null };
   }
 

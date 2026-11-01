@@ -1,8 +1,9 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UploadedFile, UseInterceptors, Res, Req, Headers } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, UploadedFile, UseInterceptors, Res, Headers, Patch, UnauthorizedException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { BoutiqueService } from './boutique.service';
 import { Boutique } from './boutique.model';
+import { JwtService } from '@nestjs/jwt';
 import { UploadService } from '../upload/upload.service';
 import { getUploadRoot } from '../upload/upload-root';
 import { Public } from '../auth/public.decorator';
@@ -12,7 +13,14 @@ import { Roles } from '../auth/roles.decorator';
 @Controller('boutique')
 export class BoutiqueController {
 
-  constructor(private readonly boutiqueService: BoutiqueService,private readonly uploadService: UploadService) {}
+  constructor(private readonly boutiqueService: BoutiqueService, private readonly uploadService: UploadService, private readonly jwt: JwtService) {}
+
+  private async getSessionUserId(authorization?: string) {
+    const token = authorization?.replace(/^Bearer\s+/i, '');
+    if (!token) throw new UnauthorizedException('Authentification requise.');
+    const payload = await this.jwt.verifyAsync<{ sub?: number }>(token);
+    return Number(payload.sub);
+  }
 
   // CREATE (multipart/form-data support)
   @Post()
@@ -62,6 +70,34 @@ export class BoutiqueController {
   @Get()
   @Public()
   async findAll() { return this.boutiqueService.findAll();}
+
+  @Get('admin/all')
+  @Roles('ADMIN')
+  async findAllForAdmin(@Headers('authorization') authorization: string) {
+    await this.getSessionUserId(authorization);
+    return this.boutiqueService.findAllForAdmin();
+  }
+
+  @Get('admin/signalements')
+  @Roles('ADMIN')
+  async getReports(@Headers('authorization') authorization: string) {
+    await this.getSessionUserId(authorization);
+    return this.boutiqueService.getReports();
+  }
+
+  @Patch('admin/:id/activation')
+  @Roles('ADMIN')
+  async toggleActivation(@Param('id') id: string, @Body() body: { active?: boolean }, @Headers('authorization') authorization: string) {
+    await this.getSessionUserId(authorization);
+    return this.boutiqueService.setStoreActive(Number(id), body?.active ?? true);
+  }
+
+  @Post(':id/signaler')
+  @Roles('UTILISATEUR', 'COMMERCANT', 'ADMIN')
+  async reportStore(@Param('id') id: string, @Body() body: { motif?: string }, @Headers('authorization') authorization: string) {
+    const token = authorization?.replace(/^Bearer\s+/i, '');
+    return this.boutiqueService.reportStore(Number(id), body?.motif ?? '', token || undefined);
+  }
 
   @Get('mine')
   async findMine(@Headers('authorization') authorization: string) {
