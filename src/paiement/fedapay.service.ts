@@ -368,8 +368,11 @@ export class FedaPayService {
     let event: FedaPayResource;
     try {
       event = Webhook.constructEvent(payload, signature, secret) as FedaPayResource;
-    } catch {
-      this.logger.warn('Webhook rejected: FedaPay signature validation failed.');
+    } catch (error) {
+      const reason = error && typeof error === 'object' && 'message' in error
+        ? String(error.message)
+        : 'Unknown signature error';
+      this.logger.warn(`Webhook rejected: FedaPay signature validation failed (${reason}).`);
       throw new UnauthorizedException('Signature FedaPay invalide');
     }
     const eventData = event.data && typeof event.data === 'object'
@@ -438,7 +441,7 @@ export class FedaPayService {
     if (!providerTransactionId) {
       throw new BadRequestException('Identifiant fournisseur absent de la transaction');
     }
-    const raw = await this.request(`/transactions/${encodeURIComponent(providerTransactionId)}`);
+    const raw = await this.request(`/transactions/${encodeURIComponent(providerTransactionId)}?include=currency`);
     const payment = this.unwrap(raw, 'transaction');
     if (payment.id !== undefined && String(payment.id) !== providerTransactionId) {
       throw new BadGatewayException('L’identifiant confirmé par FedaPay ne correspond pas à la transaction Orion');
@@ -446,10 +449,14 @@ export class FedaPayService {
     if (Number(payment.amount) !== transaction.amount) {
       throw new BadGatewayException('Le montant confirmé par FedaPay ne correspond pas à la commande Orion');
     }
-    const currency = payment.currency && typeof payment.currency === 'object'
-      ? (payment.currency as FedaPayResource).iso
-      : undefined;
-    if (String(currency ?? '').toUpperCase() !== 'XOF') {
+    const currencyValue = payment.currency;
+    const currencyIso = typeof currencyValue === 'string'
+      ? currencyValue
+      : currencyValue && typeof currencyValue === 'object'
+        ? String((currencyValue as FedaPayResource).iso ?? '')
+        : String(payment.currency_iso ?? '');
+    if (currencyIso.trim().toUpperCase() !== 'XOF') {
+      this.logger.error(`FedaPay transaction ${providerTransactionId} returned an unexpected currency (iso=${currencyIso || 'missing'}, currency_id=${String(payment.currency_id ?? 'missing')}, relation=${typeof currencyValue}).`);
       throw new BadGatewayException('La devise confirmée par FedaPay ne correspond pas à la commande Orion');
     }
     const status = String(payment.status ?? '').toLowerCase();
