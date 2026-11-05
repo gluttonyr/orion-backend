@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, HttpCode, InternalServerErrorException, Param, Post, Req, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, InternalServerErrorException, Logger, Param, Post, Req, UnauthorizedException } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
 import { CinetpayService } from './cinetpay.service';
@@ -10,6 +10,8 @@ import { Public } from '../auth/public.decorator';
 
 @Controller('paiement')
 export class PaiementController {
+  private readonly logger = new Logger(PaiementController.name);
+
   constructor(
     private readonly cinetpayService: CinetpayService,
     private readonly fedapayService: FedaPayService,
@@ -48,11 +50,13 @@ export class PaiementController {
   @Post('fedapay/webhook')
   @Public()
   @HttpCode(200)
-  fedapayWebhook(
+  async fedapayWebhook(
     @Req() request: RawBodyRequest<Request>,
     @Headers('x-fedapay-signature') signature: string,
   ) {
+    this.logger.log(`FedaPay webhook request received (rawBody=${Boolean(request.rawBody)}, signature=${Boolean(signature)}).`);
     if (!request.rawBody) {
+      this.logger.error('FedaPay webhook has no raw body; signature verification cannot run.');
       throw new InternalServerErrorException('Nest rawBody support must be enabled to validate FedaPay webhooks');
     }
     return this.fedapayService.handleWebhook(request.rawBody, signature);

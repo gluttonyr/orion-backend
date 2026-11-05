@@ -1,6 +1,7 @@
 import {
   BadGatewayException,
   BadRequestException,
+  Logger,
   Injectable,
   ServiceUnavailableException,
   UnauthorizedException,
@@ -52,6 +53,8 @@ type FedaPayResource = Record<string, unknown>;
 
 @Injectable()
 export class FedaPayService {
+  private readonly logger = new Logger(FedaPayService.name);
+
   constructor(
     private readonly config: ConfigService,
     private readonly venteService: VenteService,
@@ -354,14 +357,19 @@ export class FedaPayService {
   async handleWebhook(payload: Buffer, signature: string | undefined) {
     const secret = this.config.get<string>('FEDAPAY_WEBHOOK_SECRET');
     if (!secret) {
+      this.logger.error('Webhook received, but FEDAPAY_WEBHOOK_SECRET is not configured.');
       throw new ServiceUnavailableException('FEDAPAY_WEBHOOK_SECRET doit être configuré');
     }
-    if (!signature) throw new UnauthorizedException('Signature FedaPay manquante');
+    if (!signature) {
+      this.logger.warn('Webhook received without x-fedapay-signature.');
+      throw new UnauthorizedException('Signature FedaPay manquante');
+    }
 
     let event: FedaPayResource;
     try {
       event = Webhook.constructEvent(payload, signature, secret) as FedaPayResource;
     } catch {
+      this.logger.warn('Webhook rejected: FedaPay signature validation failed.');
       throw new UnauthorizedException('Signature FedaPay invalide');
     }
     const eventData = event.data && typeof event.data === 'object'
@@ -374,26 +382,46 @@ export class FedaPayService {
       ? eventData.object as FedaPayResource
       : {};
     const eventName = String(event.name ?? event.type ?? '').toLowerCase();
+    this.logger.log(`Verified FedaPay webhook event: ${eventName || 'unnamed'}.`);
     if (eventName && !eventName.startsWith('transaction.')) {
+      this.logger.warn(`Ignoring unsupported FedaPay event: ${eventName}.`);
       return { received: true, processed: false };
     }
     if (eventName === 'transaction.created') {
+      this.logger.log('Ignoring transaction.created; waiting for a terminal payment event.');
       return { received: true, processed: false };
     }
     const providerId = eventObject.id ?? dataObject.id ?? eventData.id;
     if (providerId === undefined || providerId === null) {
+      this.logger.error(`FedaPay event ${eventName || 'unnamed'} has no transaction ID.`);
       throw new BadRequestException('Identifiant de transaction absent du webhook FedaPay');
     }
-    await this.confirmPaymentByProviderId(String(providerId));
+    try {
+      const transaction = await this.confirmPaymentByProviderId(String(providerId));
+      this.logger.log(`FedaPay transaction ${String(providerId)} processed with Orion status ${transaction.status}.`);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'Unknown processing error';
+      this.logger.error(`FedaPay transaction ${String(providerId)} could not be processed: ${detail}`);
+      throw error;
+    }
     return { received: true };
   }
 
   async check(reference: string) {
     const transaction = await this.transactionService.findByReference(reference);
     if (transaction.methode !== 'FedaPay' || !transaction.providerTransactionId) {
+      this.logger.warn(`Manual FedaPay status check rejected for Orion transaction ${transaction.id}: provider transaction ID is missing or method differs.`);
       throw new BadRequestException('Cette référence ne correspond pas à un paiement FedaPay');
     }
-    return this.confirmPayment(transaction);
+    try {
+      const confirmed = await this.confirmPayment(transaction);
+      this.logger.log(`Manual FedaPay status check for Orion transaction ${transaction.id}: ${confirmed.status}.`);
+      return confirmed;
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'Unknown confirmation error';
+      this.logger.error(`Manual FedaPay status check failed for Orion transaction ${transaction.id}: ${detail}`);
+      throw error;
+    }
   }
 
   private async confirmPaymentByProviderId(providerId: string) {
