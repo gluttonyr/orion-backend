@@ -30,6 +30,12 @@ export class AdminController {
     return this.admin.getOrders();
   }
 
+  @Patch('admin/orders/:id/complete')
+  @UseGuards(AdminGuard)
+  async completeOrder(@Param('id') id: string) {
+    return this.admin.completeOrder(Number(id));
+  }
+
   @Get('admin/wallet')
   @UseGuards(AdminGuard)
   async wallet() {

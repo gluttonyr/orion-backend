@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Headers, Param, Post, Put, Query, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Headers, Param, Post, Put, Query, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { VenteService } from './vente.service';
 import { Vente } from './vente.model';
@@ -97,9 +97,12 @@ export class VenteController {
   @Roles('ADMIN')
   async update(
     @Param('id') id: string,
-    @Body() body: Partial<Vente>,
+    @Body() body: { statut?: string },
   ) {
-    return this.venteService.update(Number(id), body);
+    if (body?.statut !== 'terminee' || Object.keys(body).some((key) => key !== 'statut')) {
+      throw new BadRequestException('L’administration peut uniquement terminer une commande non terminée.');
+    }
+    return this.venteService.update(Number(id), { statut: 'terminee' });
   }
 
   // DELETE

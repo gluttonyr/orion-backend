@@ -235,6 +235,9 @@ export class VenteService {
   // UPDATE
   async update(id: number, data: Partial<Vente>) {
     const vente = await this.findOne(id);
+    if (vente.statut === 'terminee' && data.statut !== undefined && data.statut !== 'terminee') {
+      throw new BadRequestException('Une commande terminée ne peut plus changer de statut.');
+    }
 
     Object.assign(vente, data);
 

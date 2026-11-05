@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { existsSync, unlinkSync } from 'fs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { basename, join } from 'path';
@@ -36,10 +36,50 @@ export class AdminService implements OnModuleInit {
   }
 
   getOrders() {
-    return this.salesRepo.find({
-      relations: ['produits', 'utilisateur'],
-      order: { date_achat: 'DESC' },
+    return this.salesRepo.createQueryBuilder('sale')
+      .leftJoinAndSelect('sale.produits', 'product')
+      .leftJoinAndSelect('sale.utilisateur', 'customer')
+      .addSelect(['sale.clientPrenom', 'sale.clientNom', 'sale.clientEmail', 'sale.clientTelephone', 'sale.adresseLivraison'])
+      .orderBy('sale.date_achat', 'DESC')
+      .getMany()
+      .then(async (orders) => {
+      const sellerIds = [...new Set(orders.flatMap((order) => order.produits ?? [])
+        .map((product) => product.proprietaireId)
+        .filter((id): id is number => Number.isSafeInteger(id)))];
+      const sellers = sellerIds.length ? await this.usersRepo.find({
+        where: { id: In(sellerIds) },
+        select: { id: true, nom: true, prenom: true, email: true, contact: true },
+      }) : [];
+      const sellersById = new Map(sellers.map((seller) => [seller.id, seller]));
+
+      return orders.map((order) => ({
+        ...order,
+        utilisateur: order.utilisateur ? {
+          id: order.utilisateur.id,
+          nom: order.utilisateur.nom,
+          prenom: order.utilisateur.prenom,
+          email: order.utilisateur.email,
+          contact: order.utilisateur.contact,
+        } : null,
+        clientPrenom: order.clientPrenom,
+        clientNom: order.clientNom,
+        clientEmail: order.clientEmail,
+        clientTelephone: order.clientTelephone,
+        adresseLivraison: order.adresseLivraison,
+        vendeurs: [...new Set((order.produits ?? []).map((product) => product.proprietaireId).filter((id): id is number => Number.isSafeInteger(id)))]
+          .map((id) => sellersById.get(id))
+          .filter((seller): seller is NonNullable<typeof seller> => Boolean(seller)),
+      }));
     });
+  }
+
+  async completeOrder(id: number) {
+    const order = await this.salesRepo.findOne({ where: { id } });
+    if (!order) throw new NotFoundException('Commande introuvable.');
+    if (order.statut === 'terminee') throw new BadRequestException('Cette commande est déjà terminée et ne peut plus être modifiée.');
+    order.statut = 'terminee';
+    const completed = await this.salesRepo.save(order);
+    return { id: completed.id, reference: completed.reference, statut: completed.statut };
   }
 
   async getPlatformWallet() {
