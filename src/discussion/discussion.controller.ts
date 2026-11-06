@@ -1,35 +1,30 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Req, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Put } from '@nestjs/common';
 import { DiscussionService } from './discussion.service';
 import { Discussion } from './discussion.model';
-import type { Request } from 'express';
+import { CurrentUser, type CurrentUserClaims } from '../auth/current-user.decorator';
 
-type AuthenticatedRequest = Request & { user?: { sub?: string | number } };
-
+// Les discussions sont créées côté serveur (ex. acceptation d'une candidature à une mission).
 @Controller('api/discussion')
 export class DiscussionController {
   constructor(private readonly discussionService: DiscussionService) {}
 
-  // CREATE
-  @Post()
-  create(@Body() body: Partial<Discussion>) { return this.discussionService.create(body); }
-
-  // GET ALL
   @Get()
-  findAll(@Req() request: AuthenticatedRequest) {
-    const userId = Number(request.user?.sub);
-    if (!Number.isSafeInteger(userId) || userId <= 0) throw new UnauthorizedException('Session invalide.');
-    return this.discussionService.findForUser(userId);
+  findAll(@CurrentUser() user: CurrentUserClaims) {
+    return this.discussionService.findForUser(user.id);
   }
 
-  // GET ONE
   @Get(':id')
-  findOne(@Param('id') id: string) { return this.discussionService.findOne(Number(id)); }
+  findOne(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: CurrentUserClaims) {
+    return this.discussionService.findOneForUser(id, user.id);
+  }
 
-  // UPDATE
   @Put(':id')
-  update(@Param('id') id: string, @Body() body: Partial<Discussion>) { return this.discussionService.update(Number(id), body); }
+  update(@Param('id', ParseIntPipe) id: number, @Body() body: Partial<Discussion>, @CurrentUser() user: CurrentUserClaims) {
+    return this.discussionService.updateForUser(id, body, user.id);
+  }
 
-  // DELETE
   @Delete(':id')
-  remove(@Param('id') id: string) { return this.discussionService.remove(Number(id)); }
+  remove(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: CurrentUserClaims) {
+    return this.discussionService.removeForUser(id, user.id);
+  }
 }

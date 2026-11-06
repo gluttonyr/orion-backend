@@ -19,6 +19,7 @@ describe('ProduitService inactive store visibility', () => {
       {} as any,
       storeRepository as any,
       {} as any,
+      {} as any,
     );
 
     await expect(service.findAll()).resolves.toEqual([]);
@@ -49,6 +50,7 @@ describe('ProduitService.reportProduct', () => {
       {} as any,
       storeRepository as any,
       signalements as any,
+      {} as any,
     );
 
     const result = await service.reportProduct(2, 9, '');

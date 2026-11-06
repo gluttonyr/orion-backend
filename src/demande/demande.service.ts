@@ -17,6 +17,10 @@ export class DemandeService {
     return this.repo.find();
   }
 
+  async findByUser(utilisateurId: number) {
+    return this.repo.find({ where: { utilisateurId } });
+  }
+
   // GET ONE
   async findOne(id: number) {
     const demande = await this.repo.findOne({ where: { id } });

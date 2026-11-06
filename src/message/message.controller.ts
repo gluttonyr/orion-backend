@@ -1,28 +1,34 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put } from '@nestjs/common';
 import { MessageService } from './message.service';
 import { Message } from './message.model';
+import { CurrentUser, type CurrentUserClaims } from '../auth/current-user.decorator';
 
 @Controller('api/message')
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
 
-  // CREATE
   @Post()
-  create(@Body() body: Partial<Message>) { return this.messageService.create(body);}
+  create(@Body() body: Partial<Message>, @CurrentUser() user: CurrentUserClaims) {
+    return this.messageService.create(body, user.id);
+  }
 
-  // GET ALL
   @Get()
-  findAll() { return this.messageService.findAll();}
+  findAll(@CurrentUser() user: CurrentUserClaims) {
+    return this.messageService.findAllForUser(user.id);
+  }
 
-  // GET ONE
   @Get(':id')
-  findOne(@Param('id') id: string) { return this.messageService.findOne(Number(id));}
+  findOne(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: CurrentUserClaims) {
+    return this.messageService.findOneForUser(id, user.id);
+  }
 
-  // UPDATE
   @Put(':id')
-  update(@Param('id') id: string, @Body() body: Partial<Message>) { return this.messageService.update(Number(id), body); }
+  update(@Param('id', ParseIntPipe) id: number, @Body() body: Partial<Message>, @CurrentUser() user: CurrentUserClaims) {
+    return this.messageService.update(id, body, user.id);
+  }
 
-  // DELETE
   @Delete(':id')
-  remove(@Param('id') id: string) { return this.messageService.remove(Number(id)); }
+  remove(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: CurrentUserClaims) {
+    return this.messageService.remove(id, user.id);
+  }
 }
