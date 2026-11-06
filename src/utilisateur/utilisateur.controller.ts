@@ -1,13 +1,18 @@
-import { Body, Controller, Post, Get, Param, Put, Delete, UploadedFile, UseInterceptors, Headers, ForbiddenException, UnauthorizedException } from "@nestjs/common";
+import { Body, Controller, Post, Get, Param, Put, Delete, UploadedFile, UseInterceptors, Headers, ForbiddenException, UnauthorizedException, HttpCode } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { UtilisateurService } from "./utilisateur.service";
+import { PasswordResetService } from "./password-reset.service";
 import { JwtService } from "@nestjs/jwt";
 import { Public } from "../auth/public.decorator";
 import { Roles } from "../auth/roles.decorator";
 
 @Controller('utilisateur')
 export class UtilisateurController {
-  constructor(private readonly userService: UtilisateurService, private readonly jwt: JwtService) {}
+  constructor(
+    private readonly userService: UtilisateurService,
+    private readonly jwt: JwtService,
+    private readonly passwordReset: PasswordResetService,
+  ) {}
 
   private async requireAdmin(authorization?: string) {
     const token = authorization?.replace(/^Bearer\s+/i, '');
@@ -26,6 +31,24 @@ export class UtilisateurController {
   @Post('login')
   @Public()
   async login(@Body() body: any) { return this.userService.login(body.email, body.password);}
+
+  // MOT DE PASSE OUBLIÉ — 1. envoi du code, 2. vérification, 3. nouveau mot de passe
+  @Post('password/forgot')
+  @Public()
+  @HttpCode(200)
+  forgotPassword(@Body() body: { email?: string }) { return this.passwordReset.requestCode(body?.email); }
+
+  @Post('password/verify')
+  @Public()
+  @HttpCode(200)
+  verifyResetCode(@Body() body: { email?: string; code?: string }) { return this.passwordReset.verifyCode(body?.email, body?.code); }
+
+  @Post('password/reset')
+  @Public()
+  @HttpCode(200)
+  resetPassword(@Body() body: { email?: string; resetToken?: string; password?: string }) {
+    return this.passwordReset.resetPassword(body?.email, body?.resetToken, body?.password);
+  }
 
   // GET ALL USERS
   @Get()

@@ -34,7 +34,11 @@ export class UtilisateurService implements OnModuleInit {
     if (existingAdmin) return;
 
     const email = (process.env.DEFAULT_ADMIN_EMAIL || 'admin@orion.com').trim().toLowerCase();
-    const password = process.env.DEFAULT_ADMIN_PASSWORD || 'Admin@123456';
+    const password = process.env.DEFAULT_ADMIN_PASSWORD
+      || (process.env.NODE_ENV === 'production' ? '' : 'Admin@123456');
+    if (!password || password.length < 12 && process.env.NODE_ENV === 'production') {
+      throw new Error('DEFAULT_ADMIN_PASSWORD (12 caractères minimum) doit être défini pour créer l’administrateur initial en production.');
+    }
     const passwordHash = await bcrypt.hash(password, await bcrypt.genSalt());
 
     try {
@@ -57,7 +61,25 @@ export class UtilisateurService implements OnModuleInit {
   }
 
   // CREATE USER
-  async createUsers(user: Utilisateur & { indicatifPays?: string }) {
+  async createUsers(input: Utilisateur & { indicatifPays?: string }) {
+    if (!input || typeof input.email !== 'string' || typeof input.password !== 'string') {
+      throw new BadRequestException('L’adresse e-mail et le mot de passe sont obligatoires.');
+    }
+    if (input.password.length < 8) throw new BadRequestException('Le mot de passe doit contenir au moins 8 caractères.');
+    // Liste blanche : on n'accepte jamais id, image ou autres champs internes depuis le client.
+    const user = this.repo.create({
+      nom: input.nom,
+      prenom: input.prenom,
+      email: input.email,
+      password: input.password,
+      date_naissance: input.date_naissance,
+      adresse: input.adresse,
+      contact: input.contact,
+      role: input.role,
+      specialite: input.specialite,
+      localisation: input.localisation,
+    } as Partial<Utilisateur>) as Utilisateur & { indicatifPays?: string };
+    user.indicatifPays = input.indicatifPays;
     user.email = user.email.trim().toLowerCase();
     const dialCode = user.indicatifPays?.trim();
     const country = dialCode ? countryByDialCode[dialCode] : undefined;
@@ -85,6 +107,7 @@ export class UtilisateurService implements OnModuleInit {
 
     user.password = hashedPassword;
 
+    delete user.indicatifPays;
     let savedUser: Utilisateur;
     try {
       savedUser = await this.repo.save(user);
@@ -102,18 +125,19 @@ export class UtilisateurService implements OnModuleInit {
 
   // LOGIN
   async login(email: string, password: string) {
+    if (typeof email !== 'string' || typeof password !== 'string') throw new UnauthorizedException('E-mail ou mot de passe incorrect.');
     const user = await this.repo
       .createQueryBuilder('user')
       .where('LOWER(TRIM(user.email)) = :email', { email: email.trim().toLowerCase() })
       .getOne();
 
     // Vérification user
-    if (!user) { throw new NotFoundException("Utilisateur non trouvé");}
+    if (!user) { throw new UnauthorizedException('E-mail ou mot de passe incorrect.');}
 
     // Vérification password
     const isMatch = await bcrypt.compare(password, user.password);
 
-    if (!isMatch) { throw new UnauthorizedException("Mot de passe incorrect");}
+    if (!isMatch) { throw new UnauthorizedException('E-mail ou mot de passe incorrect.');}
 
     // Payload JWT
     const payload = {
@@ -173,7 +197,13 @@ export class UtilisateurService implements OnModuleInit {
     if (Number(decoded.sub) !== id) throw new ForbiddenException('Vous ne pouvez modifier que votre propre profil');
 
     const user = await this.findOne(id);
-    const { role, ...editableData } = data ?? {};
+    const { role } = data ?? {};
+    const editableFields = ['nom', 'prenom', 'email', 'password', 'date_naissance', 'adresse', 'contact', 'specialite', 'localisation', 'pays'] as const;
+    const editableData: Record<string, unknown> = {};
+    for (const field of editableFields) if (data?.[field] !== undefined) editableData[field] = data[field];
+    if (typeof editableData.password === 'string' && editableData.password.length < 8) {
+      throw new BadRequestException('Le mot de passe doit contenir au moins 8 caractères.');
+    }
     if (typeof editableData.email === 'string') {
       editableData.email = editableData.email.trim().toLowerCase();
       const emailOwner = await this.repo
@@ -194,7 +224,7 @@ export class UtilisateurService implements OnModuleInit {
     }
 
     // Si mot de passe modifié → rehash
-    if (editableData.password) {
+    if (typeof editableData.password === "string" && editableData.password) {
       const salt = await bcrypt.genSalt();
       editableData.password = await bcrypt.hash(editableData.password, salt);
     }

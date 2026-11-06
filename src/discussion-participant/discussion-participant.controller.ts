@@ -1,7 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Roles } from '../auth/roles.decorator';
 import { DiscussionParticipantService } from '../discussion-participant/discussion-participant.service';
 import { DiscussionParticipant } from './discussion-participant.model';
 
+@Roles('ADMIN')
 @Controller('api/discussionParticipant')
 export class DiscussionParticipantController {
   constructor(private readonly discussionParticipantService: DiscussionParticipantService) {}
