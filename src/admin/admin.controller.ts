@@ -5,12 +5,13 @@ import { extname } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { AdminService } from './admin.service';
 import { AdminGuard } from './admin.guard';
+import { OrderStatusService } from './order-status.service';
 import { Public } from '../auth/public.decorator';
 import { getUploadRoot } from '../upload/upload-root';
 
 @Controller()
 export class AdminController {
-  constructor(private readonly admin: AdminService) {}
+  constructor(private readonly admin: AdminService, private readonly orderStatus: OrderStatusService) {}
 
   @Get('admin/users')
   @UseGuards(AdminGuard)
@@ -33,7 +34,14 @@ export class AdminController {
   @Patch('admin/orders/:id/complete')
   @UseGuards(AdminGuard)
   async completeOrder(@Param('id') id: string) {
-    return this.admin.completeOrder(Number(id));
+    return this.orderStatus.changeStatus(Number(id), 'terminee');
+  }
+
+  /** Changement de statut par l'admin (voir ORDER_TRANSITIONS pour les règles). */
+  @Patch('admin/orders/:id/status')
+  @UseGuards(AdminGuard)
+  async changeOrderStatus(@Param('id') id: string, @Body() body: { statut?: string }) {
+    return this.orderStatus.changeStatus(Number(id), body?.statut);
   }
 
   @Get('admin/wallet')

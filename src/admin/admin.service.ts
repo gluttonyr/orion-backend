@@ -11,6 +11,7 @@ import { AboutTeamMember } from './about-team-member.model';
 import { Produit } from '../produit/produit.model';
 import { ProduitLike } from '../produit/produit-like.model';
 import { getUploadRoot } from '../upload/upload-root';
+import { ORDER_TRANSITIONS } from './order-status.service';
 
 @Injectable()
 export class AdminService implements OnModuleInit {
@@ -66,20 +67,12 @@ export class AdminService implements OnModuleInit {
         clientEmail: order.clientEmail,
         clientTelephone: order.clientTelephone,
         adresseLivraison: order.adresseLivraison,
+        allowedTransitions: ORDER_TRANSITIONS[order.statut] ?? [],
         vendeurs: [...new Set((order.produits ?? []).map((product) => product.proprietaireId).filter((id): id is number => Number.isSafeInteger(id)))]
           .map((id) => sellersById.get(id))
           .filter((seller): seller is NonNullable<typeof seller> => Boolean(seller)),
       }));
     });
-  }
-
-  async completeOrder(id: number) {
-    const order = await this.salesRepo.findOne({ where: { id } });
-    if (!order) throw new NotFoundException('Commande introuvable.');
-    if (order.statut === 'terminee') throw new BadRequestException('Cette commande est déjà terminée et ne peut plus être modifiée.');
-    order.statut = 'terminee';
-    const completed = await this.salesRepo.save(order);
-    return { id: completed.id, reference: completed.reference, statut: completed.statut };
   }
 
   async getPlatformWallet() {
